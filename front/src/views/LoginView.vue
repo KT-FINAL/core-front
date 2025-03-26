@@ -55,7 +55,7 @@ export default {
 
       // In a real implementation, you would call your authentication API
       // this.$store.dispatch('auth/login', { username: this.username, password: this.password })
-      //   .then(() => this.$router.push('/dashboard'))
+      //   .then(() => this.$router.push('/library'))
       //   .catch(error => console.error('Login failed:', error));
 
       // For standalone testing, we can use localStorage to simulate login
@@ -67,8 +67,8 @@ export default {
         })
       );
 
-      // Redirect to home/dashboard
-      this.$router.push("/dashboard");
+      // Redirect to library
+      this.$router.push("/library");
     },
     goToSignup() {
       this.$router.push("/signup");
