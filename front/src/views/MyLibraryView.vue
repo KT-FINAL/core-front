@@ -12,12 +12,31 @@
     </div>
 
     <div class="content">
-      <h1 class="main-title">내 서재</h1>
-      <p class="welcome-message">{{ username }}님이 저장한 책이 여기에 표시됩니다.</p>
+      <div class="tabs">
+        <h1 @click="activeTab = 'library'" :class="['tab', { active: activeTab === 'library' }]">
+          내 서재
+        </h1>
+        <h1
+          @click="activeTab = 'vocabulary'"
+          :class="['tab', { active: activeTab === 'vocabulary' }]"
+        >
+          내 단어장
+        </h1>
+      </div>
+      <p class="welcome-message">
+        {{ username }}님이 저장한
+        {{ activeTab === "library" ? "책이 " : "단어가 " }}
+        여기에 표시됩니다.
+      </p>
 
-      <div class="empty-library">
+      <div v-if="activeTab === 'library'" class="empty-library">
         <p>아직 저장된 책이 없습니다.</p>
         <button class="browse-books-btn">책 둘러보기</button>
+      </div>
+
+      <div v-if="activeTab === 'vocabulary'" class="empty-vocabulary">
+        <p>아직 저장된 단어가 없습니다.</p>
+        <button class="browse-books-btn">책을 읽고 단어 추가하기</button>
       </div>
     </div>
   </div>
@@ -26,6 +45,11 @@
 <script>
 export default {
   name: "MyLibraryView",
+  data() {
+    return {
+      activeTab: "library",
+    };
+  },
   computed: {
     username() {
       return this.$store.state.user ? this.$store.state.user.username : "User";
@@ -65,12 +89,12 @@ export default {
 }
 
 .logo {
-  height: 40px;
-  margin-right: 5px;
+  height: 20px;
+  margin-right: 3px;
 }
 
 .plus-sign {
-  font-size: 30px;
+  font-size: 20px;
   font-weight: bold;
   line-height: 1;
   position: relative;
@@ -107,11 +131,40 @@ export default {
   padding: 20px 0;
 }
 
-.main-title {
-  font-size: 28px;
-  font-weight: 700;
+.tabs {
+  display: flex;
+  gap: 20px;
   margin-bottom: 10px;
-  color: #333;
+}
+
+.tab {
+  font-size: 28px;
+  margin: 0;
+  color: #999;
+  cursor: pointer;
+  font-weight: normal;
+  position: relative;
+  padding-bottom: 5px;
+  transition: all 0.2s ease;
+
+  &.active {
+    color: #333;
+    font-weight: 700;
+
+    &:after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: #333;
+    }
+  }
+
+  &:hover:not(.active) {
+    color: #666;
+  }
 }
 
 .welcome-message {
@@ -119,7 +172,8 @@ export default {
   margin-bottom: 30px;
 }
 
-.empty-library {
+.empty-library,
+.empty-vocabulary {
   text-align: center;
   padding: 60px 0;
   background-color: #f9f9f9;

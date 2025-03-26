@@ -11,9 +11,8 @@ const routes = [
     },
   },
   {
-    path: "/dashboard",
-    name: "dashboard",
-    // Using lazy loading for other routes
+    path: "/library",
+    name: "library",
     component: () => import("../views/MyLibraryView.vue"),
     meta: {
       requiresAuth: true,
