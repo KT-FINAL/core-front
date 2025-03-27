@@ -1,41 +1,48 @@
 <template>
-  <div class="login-container">
-    <div class="logo-container">
-      <img :src="require('@/assets/Millie_Logo_kor.png')" alt="Millie Logo" class="logo" />
-      <span class="plus-sign">+</span>
+  <div class="page-container">
+    <div class="image-section">
+      <img :src="require('@/assets/login.png')" alt="Login" class="login-image" />
     </div>
-    <h1 class="main-title">독서와 무제한 친해지리</h1>
-    <p class="sub-title">20만 권 속에서 인생책을 찾아보세요</p>
+    <div class="login-section">
+      <div class="login-container">
+        <div class="logo-container">
+          <img :src="require('@/assets/Millie_Logo_kor.png')" alt="Millie Logo" class="logo" />
+          <span class="plus-sign">+</span>
+        </div>
+        <h1 class="main-title">독서와 무제한 친해지리</h1>
+        <p class="sub-title">20만 권 속에서 인생책을 찾아보세요</p>
 
-    <form @submit.prevent="handleLogin" class="login-form">
-      <div class="form-group">
-        <label for="username">아이디</label>
-        <input
-          type="text"
-          id="username"
-          v-model="username"
-          placeholder="아이디 혹은 휴대폰 번호 입력"
-          required
-        />
+        <form @submit.prevent="handleLogin" class="login-form">
+          <div class="form-group">
+            <label for="username">이메일</label>
+            <input
+              type="email"
+              id="username"
+              v-model="username"
+              placeholder="이메일 주소 입력"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password">비밀번호</label>
+            <input
+              type="password"
+              id="password"
+              v-model="password"
+              placeholder="비밀번호 입력"
+              required
+            />
+          </div>
+
+          <button type="submit" class="login-button">로그인</button>
+
+          <div class="login-options">
+            <a href="#" @click.prevent="goToSignup">회원가입</a>
+          </div>
+        </form>
       </div>
-
-      <div class="form-group">
-        <label for="password">비밀번호</label>
-        <input
-          type="password"
-          id="password"
-          v-model="password"
-          placeholder="비밀번호 입력"
-          required
-        />
-      </div>
-
-      <button type="submit" class="login-button">로그인</button>
-
-      <div class="login-options">
-        <a href="#" @click.prevent="goToSignup">회원가입</a>
-      </div>
-    </form>
+    </div>
   </div>
 </template>
 
@@ -78,9 +85,40 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.page-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.image-section {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  overflow: hidden;
+
+  .login-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.login-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: #ffffff;
+  min-width: 400px;
+}
+
 .login-container {
-  max-width: 500px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 400px;
   padding: 40px 20px;
   font-family: "Noto Sans KR", sans-serif;
 }
@@ -161,6 +199,7 @@ export default {
   font-size: 16px;
   cursor: pointer;
   margin-top: 10px;
+  margin-bottom: 5px;
 
   &:hover {
     background-color: #ffe980;
@@ -170,11 +209,11 @@ export default {
 .login-options {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
-  font-size: 14px;
+  margin-top: 0;
+  font-size: 16px;
 
   a {
-    color: #666;
+    color: #888;
     text-decoration: none;
 
     &:hover {
