@@ -1,90 +1,97 @@
 <template>
-  <div class="page-container">
-    <div class="image-section">
-      <img :src="require('@/assets/signup.png')" alt="Signup" class="signup-image" />
+  <div class="signup-container">
+    <div class="logo-container">
+      <img :src="require('@/assets/Millie_Logo_kor.png')" alt="Millie Logo" class="logo" />
+      <span class="plus-sign">+</span>
     </div>
-    <div class="signup-section">
-      <div class="signup-container">
-        <div class="logo-container">
-          <img :src="require('@/assets/Millie_Logo_kor.png')" alt="Millie Logo" class="logo" />
-          <span class="plus-sign">+</span>
-        </div>
-        <h1 class="main-title">독서와 무제한 친해지리</h1>
-        <p class="sub-title">회원가입 후 20만 권의 책을 만나보세요</p>
+    <h1 class="main-title">독서와 무제한 친해지리</h1>
+    <p class="sub-title">회원가입 후 20만 권의 책을 만나보세요</p>
 
-        <div v-if="error" class="error-message">
-          {{ error }}
-        </div>
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
 
-        <form @submit.prevent="handleSignup" class="signup-form">
-          <div class="form-group">
-            <label for="name">이름</label>
-            <input
-              type="text"
-              id="name"
-              v-model="name"
-              class="form-control"
-              placeholder="이름 입력"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="email">이메일</label>
-            <input
-              type="email"
-              id="email"
-              v-model="email"
-              class="form-control"
-              placeholder="이메일 입력"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="password">비밀번호</label>
-            <input
-              type="password"
-              id="password"
-              v-model="password"
-              class="form-control"
-              placeholder="비밀번호 입력"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="confirmPassword">비밀번호 확인</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              v-model="confirmPassword"
-              class="form-control"
-              placeholder="비밀번호 재입력"
-              required
-            />
-          </div>
-
-          <button type="submit" class="signup-button" :disabled="isLoading">
-            {{ isLoading ? "Creating account..." : "회원가입" }}
-          </button>
-        </form>
-
-        <div class="login-link">
-          이미 계정이 있으신가요? <router-link to="/">로그인</router-link>
-        </div>
+    <form @submit.prevent="handleSignup" class="signup-form">
+      <div class="form-group">
+        <label for="username">아이디</label>
+        <input
+          type="text"
+          id="username"
+          v-model="name"
+          class="form-control"
+          placeholder="아이디 입력"
+          required
+        />
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="email">이메일</label>
+        <input
+          type="email"
+          id="email"
+          v-model="email"
+          class="form-control"
+          placeholder="이메일 입력"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="phone">휴대폰 번호</label>
+        <input
+          type="tel"
+          id="phone"
+          v-model="phone"
+          class="form-control"
+          placeholder="휴대폰 번호 입력"
+          required
+          pattern="[0-9]{3}-[0-9]{4}-[0-9]{4}"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">비밀번호</label>
+        <input
+          type="password"
+          id="password"
+          v-model="password"
+          class="form-control"
+          placeholder="비밀번호 입력"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">비밀번호 확인</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          v-model="confirmPassword"
+          class="form-control"
+          placeholder="비밀번호 재입력"
+          required
+        />
+      </div>
+
+      <button type="submit" class="signup-button" :disabled="isLoading">
+        {{ isLoading ? "Creating account..." : "회원가입" }}
+      </button>
+    </form>
+
+    <div class="login-link">이미 계정이 있으신가요? <router-link to="/">로그인</router-link></div>
   </div>
 </template>
 
 <script>
+import { userService } from "@/services/api";
+
 export default {
   name: "SignupView",
   data() {
     return {
       name: "",
       email: "",
+      phone: "",
       password: "",
       confirmPassword: "",
       error: "",
@@ -92,7 +99,7 @@ export default {
     };
   },
   methods: {
-    handleSignup() {
+    async handleSignup() {
       // Reset error
       this.error = "";
 
@@ -102,17 +109,32 @@ export default {
         return;
       }
 
+      // Validate phone number format
+      const phoneRegex = /^[0-9]{3}-[0-9]{4}-[0-9]{4}$/;
+      if (!phoneRegex.test(this.phone)) {
+        this.error = "올바른 휴대폰 번호 형식이 아닙니다 (예: 010-1234-5678)";
+        return;
+      }
+
       // Set loading state
       this.isLoading = true;
 
-      // Here you would typically call your authentication service
-      // For now, we'll simulate a successful signup
-      setTimeout(() => {
-        this.isLoading = false;
+      try {
+        // Call the registration API
+        await userService.register({
+          email: this.email,
+          name: this.name,
+          phone: this.phone,
+          password: this.password,
+        });
 
         // Redirect to login page after successful signup
         this.$router.push("/");
-      }, 1000);
+      } catch (error) {
+        this.error = error.message || "회원가입 중 오류가 발생했습니다.";
+      } finally {
+        this.isLoading = false;
+      }
     },
     goToLogin() {
       this.$router.push("/");
@@ -122,82 +144,51 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.page-container {
-  display: flex;
-  min-height: 100vh;
-  width: 100%;
-}
-
-.image-section {
-  flex: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
-  overflow: hidden;
-
-  .signup-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.signup-section {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background-color: #ffffff;
-  min-width: 400px;
-}
-
 .signup-container {
-  width: 100%;
-  max-width: 400px;
-  padding: 20px;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 40px 20px;
   font-family: "Noto Sans KR", sans-serif;
 }
 
 .logo-container {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .logo {
-  height: 32px;
+  height: 40px;
   margin-right: 5px;
 }
 
 .plus-sign {
-  font-size: 24px;
+  font-size: 30px;
   font-weight: bold;
   line-height: 1;
   position: relative;
-  top: -2px;
+  top: -2px; /* Slight adjustment to align with the logo text */
 }
 
 .main-title {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
-  margin-bottom: 5px;
+  margin-bottom: 10px;
   color: #333;
   text-align: left;
 }
 
 .sub-title {
-  font-size: 16px;
+  font-size: 18px;
   color: #666;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
   text-align: left;
 }
 
 .signup-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
 }
 
 .form-group {
@@ -205,16 +196,16 @@ export default {
   flex-direction: column;
 
   label {
-    font-size: 13px;
-    margin-bottom: 3px;
+    font-size: 14px;
+    margin-bottom: 5px;
     color: #666;
   }
 
   input {
-    padding: 12px;
+    padding: 15px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 16px;
 
     &::placeholder {
       color: #ccc;
@@ -232,11 +223,10 @@ export default {
   color: #333;
   border: none;
   border-radius: 4px;
-  padding: 12px;
-  font-size: 14px;
+  padding: 15px;
+  font-size: 16px;
   cursor: pointer;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  margin-top: 10px;
 
   &:hover {
     background-color: #ffe980;
@@ -252,11 +242,11 @@ export default {
 .login-link {
   display: flex;
   justify-content: center;
-  margin-top: 10px;
+  margin-top: 20px;
   font-size: 14px;
 
   a {
-    color: #888;
+    color: #666;
     text-decoration: none;
     margin-left: 5px;
 
@@ -269,9 +259,8 @@ export default {
 .error-message {
   background-color: rgba(234, 67, 53, 0.1);
   color: var(--error-color);
-  padding: 8px;
+  padding: 10px;
   border-radius: 4px;
-  margin-bottom: 15px;
-  font-size: 13px;
+  margin-bottom: 20px;
 }
 </style>
