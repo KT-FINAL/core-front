@@ -12,6 +12,10 @@
         <h1 class="main-title">독서와 무제한 친해지리</h1>
         <p class="sub-title">20만 권 속에서 인생책을 찾아보세요</p>
 
+        <div v-if="error" class="error-message">
+          {{ error }}
+        </div>
+
         <form @submit.prevent="handleLogin" class="login-form">
           <div class="form-group">
             <label for="email">이메일</label>
@@ -35,7 +39,9 @@
             />
           </div>
 
-          <button type="submit" class="login-button" :disabled="isLoading">로그인</button>
+          <button type="submit" class="login-button" :disabled="isLoading">
+            {{ isLoading ? "로그인 중..." : "로그인" }}
+          </button>
 
           <div class="login-options">
             <a href="#" @click.prevent="goToSignup">회원가입</a>
@@ -83,7 +89,12 @@ export default {
         // Redirect to library
         this.$router.push("/library");
       } catch (error) {
-        this.error = error.message || "로그인 중 오류가 발생했습니다.";
+        // Check if the error is specifically about invalid credentials
+        if (error.response?.status === 401) {
+          this.error = "이메일 또는 비밀번호가 일치하지 않습니다.";
+        } else {
+          this.error = "로그인 중 오류가 발생했습니다.";
+        }
       } finally {
         this.isLoading = false;
       }
@@ -236,5 +247,15 @@ export default {
       text-decoration: underline;
     }
   }
+}
+
+.error-message {
+  background-color: rgba(234, 67, 53, 0.1);
+  color: #ea4335;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
 }
 </style>
