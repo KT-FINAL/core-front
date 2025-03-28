@@ -14,11 +14,11 @@
 
         <form @submit.prevent="handleLogin" class="login-form">
           <div class="form-group">
-            <label for="username">이메일</label>
+            <label for="email">이메일</label>
             <input
               type="email"
-              id="username"
-              v-model="username"
+              id="email"
+              v-model="email"
               placeholder="이메일 주소 입력"
               required
             />
@@ -35,7 +35,7 @@
             />
           </div>
 
-          <button type="submit" class="login-button">로그인</button>
+          <button type="submit" class="login-button" :disabled="isLoading">로그인</button>
 
           <div class="login-options">
             <a href="#" @click.prevent="goToSignup">회원가입</a>
@@ -47,35 +47,46 @@
 </template>
 
 <script>
+import { userService } from "@/services/api";
+
 export default {
   name: "LoginView",
   data() {
     return {
-      username: "",
+      email: "",
       password: "",
+      error: "",
+      isLoading: false,
     };
   },
   methods: {
-    handleLogin() {
-      // For now, just log the credentials
-      console.log("Login attempt with:", this.username, this.password);
+    async handleLogin() {
+      // Reset error
+      this.error = "";
+      // Set loading state
+      this.isLoading = true;
 
-      // In a real implementation, you would call your authentication API
-      // this.$store.dispatch('auth/login', { username: this.username, password: this.password })
-      //   .then(() => this.$router.push('/library'))
-      //   .catch(error => console.error('Login failed:', error));
+      try {
+        // Call the login API
+        const response = await userService.login({
+          email: this.email,
+          password: this.password,
+        });
 
-      // For standalone testing, we can use localStorage to simulate login
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          username: this.username,
+        // Store user data in Vuex store
+        this.$store.commit("setUser", {
+          email: this.email,
           isLoggedIn: true,
-        })
-      );
+          ...response,
+        });
 
-      // Redirect to library
-      this.$router.push("/library");
+        // Redirect to library
+        this.$router.push("/library");
+      } catch (error) {
+        this.error = error.message || "로그인 중 오류가 발생했습니다.";
+      } finally {
+        this.isLoading = false;
+      }
     },
     goToSignup() {
       this.$router.push("/signup");
@@ -203,6 +214,11 @@ export default {
 
   &:hover {
     background-color: #ffe980;
+  }
+
+  &:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
   }
 }
 

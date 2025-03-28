@@ -16,6 +16,14 @@ export const userService = {
       throw error.response?.data || error.message;
     }
   },
+  login: async (credentials) => {
+    try {
+      const response = await api.post("/api/v1/user/login", credentials);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default api;
