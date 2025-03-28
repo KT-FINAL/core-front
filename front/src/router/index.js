@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import LoginView from "../views/LoginView.vue";
+import SignupView from "../views/SignupView.vue";
+import MyLibraryView from "../views/MyLibraryView.vue";
 
 const routes = [
   {
@@ -13,7 +15,7 @@ const routes = [
   {
     path: "/library",
     name: "library",
-    component: () => import("../views/MyLibraryView.vue"),
+    component: MyLibraryView,
     meta: {
       requiresAuth: true,
       title: "서재 | 밀리의 서재",
@@ -22,7 +24,7 @@ const routes = [
   {
     path: "/signup",
     name: "signup",
-    component: () => import("../views/SignupView.vue"),
+    component: SignupView,
     meta: {
       title: "회원가입 | 밀리의 서재",
     },

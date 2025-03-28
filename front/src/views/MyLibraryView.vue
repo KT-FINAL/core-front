@@ -1,8 +1,8 @@
 <template>
   <div class="mylibrary-container">
     <div class="header">
-      <div class="logo-container">
-        <img :src="require('@/assets/Millie_Logo_kor.png')" alt="Millie Logo" class="logo" />
+      <div class="elogo-container">
+        <img :src="require('@/assets/Millie_Logo_Eng.png')" alt="Millie Logo Eng" class="elogo" />
         <span class="plus-sign">+</span>
       </div>
       <div class="user-menu">
@@ -52,7 +52,7 @@ export default {
   },
   computed: {
     username() {
-      return this.$store.state.user ? this.$store.state.user.username : "User";
+      return this.$store.state.user ? this.$store.state.user.email : "User";
     },
   },
   methods: {
@@ -83,13 +83,13 @@ export default {
   border-bottom: 1px solid #eee;
 }
 
-.logo-container {
+.elogo-container {
   display: flex;
   align-items: center;
 }
 
-.logo {
-  height: 20px;
+.elogo {
+  height: 30px;
   margin-right: 3px;
 }
 
@@ -98,7 +98,7 @@ export default {
   font-weight: bold;
   line-height: 1;
   position: relative;
-  top: -2px;
+  top: -4px;
 }
 
 .user-menu {
