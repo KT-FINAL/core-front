@@ -6,6 +6,7 @@ export default createStore({
   },
   getters: {
     isLoggedIn: (state) => !!state.user,
+    userName: (state) => state.user?.name || "User",
   },
   mutations: {
     setUser(state, user) {
