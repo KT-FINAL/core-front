@@ -6,7 +6,7 @@
         <span class="plus-sign">+</span>
       </div>
       <div class="user-menu">
-        <span class="username">{{ username }}님</span>
+        <span class="username">{{ userName }}님</span>
         <button @click="handleLogout" class="logout-button">로그아웃</button>
       </div>
     </div>
@@ -24,7 +24,7 @@
         </h1>
       </div>
       <p class="welcome-message">
-        {{ username }}님이 저장한
+        {{ userName }}님이 저장한
         {{ activeTab === "library" ? "책이 " : "단어가 " }}
         여기에 표시됩니다.
       </p>
@@ -43,6 +43,8 @@
 </template>
 
 <script>
+import { mapGetters } from "vuex";
+
 export default {
   name: "MyLibraryView",
   data() {
@@ -51,9 +53,7 @@ export default {
     };
   },
   computed: {
-    username() {
-      return this.$store.state.user ? this.$store.state.user.email : "User";
-    },
+    ...mapGetters(["userName"]),
   },
   methods: {
     handleLogout() {
@@ -98,7 +98,7 @@ export default {
   font-weight: bold;
   line-height: 1;
   position: relative;
-  top: -4px;
+  top: -6px;
 }
 
 .user-menu {
@@ -138,7 +138,7 @@ export default {
 }
 
 .tab {
-  font-size: 28px;
+  font-size: 23px;
   margin: 0;
   color: #999;
   cursor: pointer;

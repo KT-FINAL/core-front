@@ -161,7 +161,7 @@ export default {
   font-weight: bold;
   line-height: 1;
   position: relative;
-  top: -2px; /* Slight adjustment to align with the logo text */
+  top: -10px;
 }
 
 .main-title {
