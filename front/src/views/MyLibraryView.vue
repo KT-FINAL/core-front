@@ -120,8 +120,8 @@ export default {
   },
   methods: {
     handleLogout() {
-      // Clear user data from localStorage
-      this.$store.dispatch("logout");
+      // Just clear local user data without requiring backend
+      localStorage.removeItem("user");
       // Redirect to login page
       this.$router.push("/");
     },
@@ -195,7 +195,7 @@ export default {
 
 .elogo {
   height: 40px;
-  margin-right: 5px;
+  margin-right: 0px;
 }
 
 .plus-sign {

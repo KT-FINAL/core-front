@@ -18,7 +18,7 @@ const routes = [
     name: "library",
     component: MyLibraryView,
     meta: {
-      requiresAuth: true,
+      requiresAuth: false,
       title: "서재 | 밀리의 서재",
     },
   },
@@ -35,7 +35,7 @@ const routes = [
     name: "book-reader",
     component: BookReaderView,
     meta: {
-      requiresAuth: true,
+      requiresAuth: false,
       title: "책 읽기 | 밀리의 서재",
     },
     props: true,

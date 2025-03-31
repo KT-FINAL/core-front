@@ -20,17 +20,17 @@ export default createStore({
   },
   actions: {
     login({ commit }, credentials) {
-      // In a real app, you would make an API call here
+      // Instead of API call, just create a mock user
       return new Promise((resolve) => {
-        // Simulate API call
-        setTimeout(() => {
-          const user = {
-            username: credentials.username,
-            isLoggedIn: true,
-          };
-          commit("setUser", user);
-          resolve(user);
-        }, 1000);
+        // Create dummy user data
+        const user = {
+          id: "user123",
+          username: credentials.username || "Demo User",
+          name: credentials.username || "Demo User",
+          isLoggedIn: true,
+        };
+        commit("setUser", user);
+        resolve(user);
       });
     },
     logout({ commit }) {

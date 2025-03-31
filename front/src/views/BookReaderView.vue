@@ -2,7 +2,7 @@
   <div class="book-reader-container">
     <div class="header">
       <div class="elogo-container">
-        <img :src="require('@/assets/Millie_Logo_Eng.png')" alt="Millie Logo Eng" class="elogo" />
+        <img src="@/assets/Millie_Logo_Eng.png" alt="Millie Logo Eng" class="elogo" />
         <span class="plus-sign">+</span>
       </div>
       <div class="user-menu">
@@ -13,7 +13,14 @@
     </div>
 
     <div class="content">
-      <PDFReader :pdfUrl="pdfUrl" />
+      <PDFReader
+        :pdfUrl="pdfUrl"
+        :bookId="bookId"
+        :bookInfo="{
+          title: currentBook?.title || 'Unknown Book',
+          author: currentBook?.author || 'Unknown Author',
+        }"
+      />
     </div>
   </div>
 </template>
@@ -53,6 +60,27 @@ export default {
           coverImage: "/covers/Cover_Johann Hari - Stolen focus (2022).png",
           pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
         };
+      } else if (bookId === "thinking-fast-slow") {
+        currentBook.value = {
+          id: "thinking-fast-slow",
+          title: "Thinking, Fast and Slow",
+          author: "Daniel Kahneman",
+          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf", // Using the same PDF for demo
+        };
+      } else if (bookId === "quiet") {
+        currentBook.value = {
+          id: "quiet",
+          title: "Quiet: The Power of Introverts in a World That Can't Stop Talking",
+          author: "Susan Cain",
+          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf", // Using the same PDF for demo
+        };
+      } else if (bookId === "sapiens") {
+        currentBook.value = {
+          id: "sapiens",
+          title: "Sapiens: A Brief History of Humankind",
+          author: "Yuval Noah Harari",
+          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf", // Using the same PDF for demo
+        };
       } else {
         console.error(`Book with ID ${bookId} not found`);
         router.push("/library");
@@ -64,7 +92,8 @@ export default {
     };
 
     const handleLogout = () => {
-      store.dispatch("logout");
+      // Just clear local user data without requiring backend
+      localStorage.removeItem("user");
       router.push("/");
     };
 
@@ -91,6 +120,7 @@ export default {
       userName,
       handleLogout,
       pdfUrl,
+      bookId,
     };
   },
 };
@@ -124,7 +154,7 @@ export default {
 
 .elogo {
   height: 40px;
-  margin-right: 5px;
+  margin-right: 0px;
 }
 
 .plus-sign {
