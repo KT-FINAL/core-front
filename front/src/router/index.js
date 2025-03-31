@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import LoginView from "../views/LoginView.vue";
 import SignupView from "../views/SignupView.vue";
 import MyLibraryView from "../views/MyLibraryView.vue";
+import BookReaderView from "../views/BookReaderView.vue";
 
 const routes = [
   {
@@ -28,6 +29,16 @@ const routes = [
     meta: {
       title: "회원가입 | 밀리의 서재",
     },
+  },
+  {
+    path: "/book/:id",
+    name: "book-reader",
+    component: BookReaderView,
+    meta: {
+      requiresAuth: true,
+      title: "책 읽기 | 밀리의 서재",
+    },
+    props: true,
   },
 ];
 

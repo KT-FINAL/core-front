@@ -29,14 +29,62 @@
         여기에 표시됩니다.
       </p>
 
-      <div v-if="activeTab === 'library'" class="empty-library">
-        <p>아직 저장된 책이 없습니다.</p>
-        <button class="browse-books-btn">책 둘러보기</button>
+      <div v-if="activeTab === 'library'" class="library-content">
+        <div v-if="books.length === 0" class="empty-library">
+          <p>아직 저장된 책이 없습니다.</p>
+          <button class="browse-books-btn">책 둘러보기</button>
+        </div>
+        <div v-else class="books-grid">
+          <div v-for="book in books" :key="book.id" class="book-card">
+            <div class="book-cover">
+              <img v-if="book.extractedCover" :src="book.extractedCover" :alt="book.title" />
+              <img v-else-if="book.coverImage" :src="book.coverImage" :alt="book.title" />
+              <div v-else class="placeholder-cover">
+                <p>{{ book.title }}</p>
+                <p class="author-placeholder">{{ book.author }}</p>
+              </div>
+            </div>
+            <div class="book-info">
+              <h3 class="book-title">{{ book.title }}</h3>
+              <p class="book-author">{{ book.author }}</p>
+              <button @click="openBook(book.id)" class="read-book-btn">읽기</button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div v-if="activeTab === 'vocabulary'" class="empty-vocabulary">
-        <p>아직 저장된 단어가 없습니다.</p>
-        <button class="browse-books-btn">책을 읽고 단어 추가하기</button>
+      <div v-if="activeTab === 'vocabulary'" class="vocabulary-content">
+        <div v-if="vocabulary.length === 0" class="empty-vocabulary">
+          <p>아직 저장된 단어가 없습니다.</p>
+          <button class="browse-books-btn">책을 읽고 단어 추가하기</button>
+        </div>
+        <div v-else class="vocabulary-list">
+          <div v-for="(entry, index) in vocabulary" :key="index" class="vocabulary-item">
+            <div class="word-header">
+              <h3 class="vocabulary-word">{{ entry.word }}</h3>
+              <span class="language-tag">{{ entry.language === "ko" ? "한국어" : "영어" }}</span>
+              <div v-if="entry.phonetic" class="phonetic">{{ entry.phonetic }}</div>
+            </div>
+            <div class="word-definition">
+              <div v-for="(meaning, mIndex) in entry.definition" :key="mIndex">
+                <p class="part-of-speech">{{ meaning.partOfSpeech }}</p>
+                <ul>
+                  <li v-for="(def, dIndex) in meaning.definitions" :key="dIndex">
+                    {{ def.definition }}
+                    <div v-if="def.example" class="example">
+                      <span class="example-label">예시:</span> {{ def.example }}
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="word-meta">
+              <span class="book-info">책: {{ entry.bookId }}</span>
+              <span class="page-info">페이지: {{ entry.page }}</span>
+              <span class="date-info">저장일: {{ formatDate(entry.timestamp) }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -50,10 +98,26 @@ export default {
   data() {
     return {
       activeTab: "library",
+      books: [
+        {
+          id: "stolen-focus",
+          title: "Stolen Focus: Why You Can't Pay Attention",
+          author: "Johann Hari",
+          coverImage: "/covers/Cover_Johann Hari - Stolen focus (2022).png",
+          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
+        },
+      ],
+      vocabulary: [],
     };
   },
   computed: {
     ...mapGetters(["userName"]),
+  },
+  mounted() {
+    // Check if we have extracted covers in localStorage
+    this.checkForExtractedCovers();
+    // Load vocabulary from localStorage
+    this.loadVocabulary();
   },
   methods: {
     handleLogout() {
@@ -61,6 +125,47 @@ export default {
       this.$store.dispatch("logout");
       // Redirect to login page
       this.$router.push("/");
+    },
+    openBook(bookId) {
+      this.$router.push(`/book/${bookId}`);
+    },
+    checkForExtractedCovers() {
+      // For each book, check if we have an extracted cover in localStorage
+      this.books.forEach((book) => {
+        const savedCover = localStorage.getItem(`book_cover_${book.id}`);
+        if (savedCover) {
+          // Use the extracted cover instead of the default one
+          book.extractedCover = savedCover;
+        }
+      });
+    },
+    loadVocabulary() {
+      try {
+        // Load vocabulary from localStorage
+        const savedVocabulary = localStorage.getItem("vocabulary");
+        if (savedVocabulary) {
+          this.vocabulary = JSON.parse(savedVocabulary);
+          // Sort by timestamp (most recent first)
+          this.vocabulary.sort((a, b) => {
+            return new Date(b.timestamp) - new Date(a.timestamp);
+          });
+        }
+      } catch (error) {
+        console.error("Error loading vocabulary:", error);
+        this.vocabulary = [];
+      }
+    },
+    formatDate(timestamp) {
+      try {
+        const date = new Date(timestamp);
+        return date.toLocaleDateString("ko-KR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      } catch (error) {
+        return timestamp;
+      }
     },
   },
 };
@@ -199,5 +304,173 @@ export default {
   &:hover {
     background-color: #ffe980;
   }
+}
+
+.library-content {
+  margin-top: 20px;
+}
+
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 30px;
+}
+
+.book-card {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  background-color: white;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+.book-cover {
+  height: 280px;
+  overflow: hidden;
+  background-color: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.book-info {
+  padding: 15px;
+}
+
+.book-title {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.book-author {
+  margin: 0 0 15px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.read-book-btn {
+  width: 100%;
+  padding: 8px 0;
+  background-color: #4a4a4a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover {
+    background-color: #333;
+  }
+}
+
+.placeholder-cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 20px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+
+  p {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
+}
+
+.vocabulary-content {
+  margin-top: 20px;
+}
+
+.vocabulary-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 30px;
+}
+
+.vocabulary-item {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  background-color: white;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+.word-header {
+  padding: 15px;
+  background-color: #f0f0f0;
+}
+
+.vocabulary-word {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.language-tag {
+  font-size: 14px;
+  color: #666;
+}
+
+.word-definition {
+  padding: 15px;
+}
+
+.part-of-speech {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.example {
+  margin-top: 5px;
+  margin-left: 20px;
+}
+
+.example-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.word-meta {
+  padding: 15px;
+  background-color: #f0f0f0;
+}
+
+.book-info {
+  margin-top: 5px;
+  font-size: 14px;
+  color: #666;
+}
+
+.page-info {
+  margin-left: 10px;
+}
+
+.date-info {
+  margin-left: 10px;
+}
+
+.phonetic {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
 }
 </style>
