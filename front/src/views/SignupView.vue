@@ -203,11 +203,12 @@ export default {
 }
 
 .plus-sign {
-  font-size: 24px;
+  font-size: 30px;
   font-weight: bold;
   line-height: 1;
   position: relative;
   top: -10px;
+  color: #ff5252;
 }
 
 .main-title {
