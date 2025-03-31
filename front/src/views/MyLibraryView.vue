@@ -172,11 +172,12 @@ export default {
 
 <style scoped lang="scss">
 .mylibrary-container {
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: 20px;
   font-family: "Noto Sans KR", sans-serif;
   background-color: white;
+  min-height: 100vh;
 }
 
 .header {
@@ -235,6 +236,7 @@ export default {
 }
 
 .content {
+  width: 100%;
   padding: 20px 0;
 }
 
@@ -330,8 +332,9 @@ export default {
 
 .books-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 30px;
+  padding: 10px;
 }
 
 .book-card {
@@ -340,6 +343,7 @@ export default {
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
   background-color: white;
+  height: 100%;
 
   &:hover {
     transform: translateY(-5px);
@@ -348,7 +352,7 @@ export default {
 }
 
 .book-cover {
-  height: 280px;
+  height: 320px;
   overflow: hidden;
   background-color: #f5f5f5;
   display: flex;
@@ -419,8 +423,9 @@ export default {
 
 .vocabulary-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 30px;
+  padding: 10px;
 }
 
 .vocabulary-item {

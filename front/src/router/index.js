@@ -32,7 +32,7 @@ const routes = [
   },
   {
     path: "/book/:id",
-    name: "book-reader",
+    name: "BookReader",
     component: BookReaderView,
     meta: {
       requiresAuth: false,
