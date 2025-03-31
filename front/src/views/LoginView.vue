@@ -162,6 +162,7 @@ export default {
   line-height: 1;
   position: relative;
   top: -10px;
+  color: #ff5252;
 }
 
 .main-title {

@@ -6,7 +6,7 @@
         <span class="plus-sign">+</span>
       </div>
       <div class="user-menu">
-        <button @click="goToLibrary" class="library-button">내 서재로 돌아가기</button>
+        <button @click="goBack" class="library-button">내 서재로 돌아가기</button>
         <span class="username">{{ userName }}님</span>
         <button @click="handleLogout" class="logout-button">로그아웃</button>
       </div>
@@ -20,37 +20,62 @@
 
 <script>
 import PDFReader from "@/components/PDFReader.vue";
-import { mapGetters } from "vuex";
+import { useStore } from "vuex";
+import { ref, onMounted, computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 export default {
   name: "BookReaderView",
   components: {
     PDFReader,
   },
-  props: {
-    id: {
-      type: String,
-      required: true,
-    },
-  },
-  data() {
-    return {
-      book: null,
+  setup() {
+    const store = useStore();
+    const route = useRoute();
+    const router = useRouter();
+    const bookId = route.params.id;
+    const currentBook = ref(null);
+    const userName = computed(() => store.getters.userName || "Guest");
+
+    // Get current book info based on bookId
+    onMounted(() => {
+      // This would normally be a call to fetch book data
+      // For now, we'll use hardcoded data
+      console.log(`Loading book with ID: ${bookId}`);
+
+      // In a real app, this would fetch the book by ID from an API
+      // For now, we'll use hardcoded data that matches the ID
+      if (bookId === "stolen-focus") {
+        currentBook.value = {
+          id: "stolen-focus",
+          title: "Stolen Focus: Why You Can't Pay Attention",
+          author: "Johann Hari",
+          coverImage: "/covers/Cover_Johann Hari - Stolen focus (2022).png",
+          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
+        };
+      } else {
+        console.error(`Book with ID ${bookId} not found`);
+        router.push("/library");
+      }
+    });
+
+    const goBack = () => {
+      router.push("/library");
     };
-  },
-  computed: {
-    ...mapGetters(["userName"]),
-    bookTitle() {
-      return this.book ? this.book.title : "Loading...";
-    },
-    pdfUrl() {
-      if (!this.book) return "";
+
+    const handleLogout = () => {
+      store.dispatch("logout");
+      router.push("/");
+    };
+
+    const pdfUrl = computed(() => {
+      if (!currentBook.value) return "";
 
       // For debugging purposes
-      console.log("PDF URL from book:", this.book.pdfUrl);
+      console.log("PDF URL from book:", currentBook.value.pdfUrl);
 
       // Ensure the URL is properly formatted, especially for filenames with spaces
-      const url = this.book.pdfUrl;
+      const url = currentBook.value.pdfUrl;
 
       // For relative URLs starting with "/"
       if (url.startsWith("/")) {
@@ -58,48 +83,26 @@ export default {
       }
 
       return url;
-    },
-  },
-  created() {
-    // In a real app, you would fetch this from an API
-    // For demonstration, we're using a simple array of books
-    const books = [
-      {
-        id: "stolen-focus",
-        title: "Stolen Focus: Why You Can't Pay Attention",
-        author: "Johann Hari",
-        pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
-        coverUrl: "/covers/Cover_Johann Hari - Stolen focus (2022).png",
-      },
-    ];
+    });
 
-    // Find the book with the matching id
-    this.book = books.find((book) => book.id === this.id);
-
-    if (!this.book) {
-      // Handle book not found
-      console.error("Book not found:", this.id);
-      this.$router.push("/library");
-    }
-  },
-  methods: {
-    goToLibrary() {
-      this.$router.push("/library");
-    },
-    handleLogout() {
-      this.$store.dispatch("logout");
-      this.$router.push("/");
-    },
+    return {
+      currentBook,
+      goBack,
+      userName,
+      handleLogout,
+      pdfUrl,
+    };
   },
 };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .book-reader-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100%;
+  font-family: "Noto Sans KR", sans-serif;
 }
 
 .header {
@@ -110,6 +113,7 @@ export default {
   background-color: white;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   z-index: 100;
+  border-bottom: 1px solid #eee;
 }
 
 .elogo-container {
@@ -119,15 +123,16 @@ export default {
 }
 
 .elogo {
-  height: 24px;
+  height: 40px;
+  margin-right: 5px;
 }
 
 .plus-sign {
-  font-size: 20px;
+  font-size: 30px;
+  font-weight: bold;
   color: #ff5252;
   position: relative;
-  top: -4px;
-  margin-left: 2px;
+  top: -10px;
 }
 
 .user-menu {
@@ -138,6 +143,8 @@ export default {
 
 .username {
   font-weight: 500;
+  color: #333;
+  font-size: 16px;
 }
 
 .library-button,
@@ -147,16 +154,26 @@ export default {
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .library-button {
-  background-color: #4a4a4a;
-  color: white;
+  background-color: #fff2b2;
+  color: #333;
+
+  &:hover {
+    background-color: #ffe980;
+  }
 }
 
 .logout-button {
-  background-color: #f0f0f0;
-  color: #4a4a4a;
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+
+  &:hover {
+    background-color: #e8e8e8;
+  }
 }
 
 .content {
@@ -165,6 +182,7 @@ export default {
   flex-grow: 1;
   padding: 0;
   overflow: hidden;
+  background-color: #f9f9f9;
 }
 
 .book-title {

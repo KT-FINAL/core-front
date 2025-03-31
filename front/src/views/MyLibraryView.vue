@@ -24,9 +24,8 @@
         </h1>
       </div>
       <p class="welcome-message">
-        {{ userName }}님이 저장한
-        {{ activeTab === "library" ? "책이 " : "단어가 " }}
-        여기에 표시됩니다.
+        {{ userName }}님이 저장한 {{ activeTab === "library" ? "책이 " : "단어가 " }} 여기에
+        표시됩니다.
       </p>
 
       <div v-if="activeTab === 'library'" class="library-content">
@@ -177,6 +176,7 @@ export default {
   margin: 0 auto;
   padding: 20px;
   font-family: "Noto Sans KR", sans-serif;
+  background-color: white;
 }
 
 .header {
@@ -194,16 +194,17 @@ export default {
 }
 
 .elogo {
-  height: 30px;
-  margin-right: 3px;
+  height: 40px;
+  margin-right: 5px;
 }
 
 .plus-sign {
-  font-size: 20px;
+  font-size: 30px;
   font-weight: bold;
   line-height: 1;
   position: relative;
-  top: -6px;
+  top: -10px;
+  color: #ff5252;
 }
 
 .user-menu {
@@ -215,20 +216,21 @@ export default {
 .username {
   font-size: 16px;
   font-weight: 500;
+  color: #333;
 }
 
 .logout-button {
-  background: none;
+  background-color: #f5f5f5;
+  color: #666;
   border: 1px solid #ddd;
   border-radius: 4px;
-  padding: 8px 12px;
+  padding: 8px 16px;
   font-size: 14px;
   cursor: pointer;
-  color: #666;
   transition: all 0.2s;
 
   &:hover {
-    background-color: #f5f5f5;
+    background-color: #e8e8e8;
   }
 }
 
@@ -243,7 +245,7 @@ export default {
 }
 
 .tab {
-  font-size: 23px;
+  font-size: 24px;
   margin: 0;
   color: #999;
   cursor: pointer;
@@ -275,18 +277,33 @@ export default {
 .welcome-message {
   color: #666;
   margin-bottom: 30px;
+  font-size: 18px;
 }
 
-.empty-library,
-.empty-vocabulary {
+.empty-library {
   text-align: center;
   padding: 60px 0;
-  background-color: #f9f9f9;
+  background-color: #f5f5f5;
   border-radius: 8px;
   margin-top: 20px;
 
   p {
-    color: #888;
+    color: #666;
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+}
+
+.empty-vocabulary {
+  text-align: center;
+  padding: 60px 0;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin-top: 20px;
+
+  p {
+    color: #666;
+    font-size: 18px;
     margin-bottom: 20px;
   }
 }
@@ -300,6 +317,7 @@ export default {
   font-size: 16px;
   cursor: pointer;
   font-weight: 500;
+  transition: all 0.2s;
 
   &:hover {
     background-color: #ffe980;
@@ -320,11 +338,12 @@ export default {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   background-color: white;
 
   &:hover {
     transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
   }
 }
 
@@ -351,6 +370,7 @@ export default {
   margin: 0 0 5px 0;
   font-size: 16px;
   font-weight: 500;
+  color: #333;
 }
 
 .book-author {
@@ -361,16 +381,17 @@ export default {
 
 .read-book-btn {
   width: 100%;
-  padding: 8px 0;
-  background-color: #4a4a4a;
-  color: white;
+  padding: 10px 0;
+  background-color: #fff2b2;
+  color: #333;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
+  transition: all 0.2s;
 
   &:hover {
-    background-color: #333;
+    background-color: #ffe980;
   }
 }
 
@@ -388,6 +409,7 @@ export default {
     margin: 0;
     font-size: 16px;
     font-weight: 500;
+    color: #333;
   }
 }
 
@@ -405,28 +427,36 @@ export default {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   background-color: white;
 
   &:hover {
     transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
   }
 }
 
 .word-header {
   padding: 15px;
-  background-color: #f0f0f0;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #eee;
 }
 
 .vocabulary-word {
   margin: 0 0 5px 0;
   font-size: 16px;
   font-weight: 500;
+  color: #333;
 }
 
 .language-tag {
   font-size: 14px;
   color: #666;
+  display: inline-block;
+  padding: 2px 6px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  margin-right: 5px;
 }
 
 .word-definition {
@@ -437,40 +467,42 @@ export default {
   margin: 0 0 5px 0;
   font-size: 14px;
   font-weight: 500;
+  color: #666;
+  font-style: italic;
 }
 
 .example {
   margin-top: 5px;
   margin-left: 20px;
+  font-size: 14px;
+  color: #666;
 }
 
 .example-label {
   font-size: 14px;
-  color: #666;
+  color: #333;
+  font-weight: 500;
 }
 
 .word-meta {
   padding: 15px;
-  background-color: #f0f0f0;
-}
-
-.book-info {
-  margin-top: 5px;
+  background-color: #f5f5f5;
+  border-top: 1px solid #eee;
   font-size: 14px;
   color: #666;
 }
 
-.page-info {
-  margin-left: 10px;
-}
-
+.book-info,
+.page-info,
 .date-info {
-  margin-left: 10px;
+  display: inline-block;
+  margin-right: 10px;
 }
 
 .phonetic {
   font-size: 14px;
   color: #666;
   margin-top: 5px;
+  font-style: italic;
 }
 </style>
