@@ -102,7 +102,7 @@ export default {
     },
 
     goBack() {
-      this.$router.push("/books");
+      this.$router.push("/library");
     },
   },
 };

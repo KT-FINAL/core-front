@@ -55,19 +55,30 @@
       <div v-if="activeTab === 'vocabulary'" class="vocabulary-content">
         <div v-if="vocabulary.length === 0" class="empty-vocabulary">
           <p>아직 저장된 단어가 없습니다.</p>
-          <button class="browse-books-btn vocabulary-btn">책을 읽고 단어 추가하기</button>
+          <button class="browse-books-btn">책을 읽고 단어 추가하기</button>
         </div>
         <div v-else class="vocabulary-list">
           <div v-for="(entry, index) in vocabulary" :key="index" class="vocabulary-item">
             <div class="word-header">
               <h3 class="vocabulary-word">{{ entry.word }}</h3>
+              <span class="language-tag">{{ entry.language === "ko" ? "한국어" : "영어" }}</span>
+              <div v-if="entry.phonetic" class="phonetic">{{ entry.phonetic }}</div>
             </div>
-            <div class="word-context">
-              <p>{{ entry.context }}</p>
+            <div class="word-definition">
+              <div v-for="(meaning, mIndex) in entry.definition" :key="mIndex">
+                <p class="part-of-speech">{{ meaning.partOfSpeech }}</p>
+                <ul>
+                  <li v-for="(def, dIndex) in meaning.definitions" :key="dIndex">
+                    {{ def.definition }}
+                    <div v-if="def.example" class="example">
+                      <span class="example-label">예시:</span> {{ def.example }}
+                    </div>
+                  </li>
+                </ul>
+              </div>
             </div>
             <div class="word-meta">
-              <span class="book-info">{{ entry.bookTitle }}</span>
-              <span class="author-info">{{ entry.bookAuthor }}</span>
+              <span class="book-info">책: {{ entry.bookId }}</span>
               <span class="page-info">페이지: {{ entry.page }}</span>
               <span class="date-info">저장일: {{ formatDate(entry.timestamp) }}</span>
             </div>
@@ -92,6 +103,7 @@ export default {
           title: "Stolen Focus: Why You Can't Pay Attention",
           author: "Johann Hari",
           coverImage: "/covers/Cover_Johann Hari - Stolen focus (2022).png",
+          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
         },
       ],
       vocabulary: [],
@@ -160,7 +172,7 @@ export default {
 
 <style scoped lang="scss">
 .mylibrary-container {
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: 20px;
   font-family: "Noto Sans KR", sans-serif;
@@ -225,6 +237,7 @@ export default {
 
 .content {
   width: 100%;
+  padding: 20px 0;
 }
 
 .tabs {
@@ -237,10 +250,11 @@ export default {
   font-size: 24px;
   margin: 0;
   color: #999;
-  font-weight: normal;
   cursor: pointer;
+  font-weight: normal;
   position: relative;
-  transition: all 0.2s;
+  padding-bottom: 5px;
+  transition: all 0.2s ease;
 
   &.active {
     color: #333;
@@ -249,11 +263,11 @@ export default {
     &:after {
       content: "";
       position: absolute;
+      bottom: 0;
+      left: 0;
       width: 100%;
       height: 2px;
       background-color: #333;
-      bottom: 0;
-      left: 0;
     }
   }
 
@@ -263,73 +277,87 @@ export default {
 }
 
 .welcome-message {
-  font-size: 16px;
   color: #666;
-  margin-top: 5px;
   margin-bottom: 30px;
+  font-size: 18px;
 }
 
 .empty-library {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  min-height: 300px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  padding: 50px;
   text-align: center;
+  padding: 60px 0;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin-top: 20px;
 
   p {
-    font-size: 18px;
     color: #666;
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+}
+
+.empty-vocabulary {
+  text-align: center;
+  padding: 60px 0;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin-top: 20px;
+
+  p {
+    color: #666;
+    font-size: 18px;
+    margin-bottom: 20px;
   }
 }
 
 .browse-books-btn {
-  background-color: #ff5252;
-  color: white;
+  background-color: #fff2b2;
+  color: #333;
   border: none;
   border-radius: 4px;
   padding: 12px 24px;
   font-size: 16px;
-  font-weight: 500;
   cursor: pointer;
+  font-weight: 500;
   transition: all 0.2s;
 
   &:hover {
-    background-color: #e73838;
+    background-color: #ffe980;
   }
+}
+
+.library-content {
+  margin-top: 20px;
 }
 
 .books-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 30px;
-  margin-top: 20px;
+  padding: 10px;
 }
 
 .book-card {
-  display: flex;
-  flex-direction: column;
-  background-color: white;
   border-radius: 8px;
   overflow: hidden;
-  transition: all 0.3s;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  background-color: white;
+  height: 100%;
 
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
   }
 }
 
 .book-cover {
-  position: relative;
-  height: 260px;
+  height: 320px;
   overflow: hidden;
   background-color: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
   img {
     width: 100%;
@@ -338,65 +366,32 @@ export default {
   }
 }
 
-.placeholder-cover {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  color: #333;
-  text-align: center;
-
-  p {
-    font-weight: bold;
-    font-size: 16px;
-    margin: 0;
-  }
-
-  .author-placeholder {
-    font-weight: normal;
-    margin-top: 10px;
-    font-size: 14px;
-    color: #666;
-  }
-}
-
 .book-info {
   padding: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
 }
 
 .book-title {
+  margin: 0 0 5px 0;
   font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 500;
+  color: #333;
 }
 
 .book-author {
+  margin: 0 0 15px 0;
   font-size: 14px;
   color: #666;
-  margin: 0 0 15px 0;
 }
 
 .read-book-btn {
+  width: 100%;
+  padding: 10px 0;
   background-color: #fff2b2;
   color: #333;
   border: none;
   border-radius: 4px;
-  padding: 8px 0;
-  font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
+  font-weight: 500;
   transition: all 0.2s;
 
   &:hover {
@@ -404,45 +399,41 @@ export default {
   }
 }
 
-.empty-vocabulary {
+.placeholder-cover {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  gap: 20px;
-  min-height: 300px;
-  background-color: #f9f9f9;
+  align-items: center;
+  height: 100%;
+  padding: 20px;
+  background-color: #f0f0f0;
   border-radius: 8px;
-  padding: 50px;
-  text-align: center;
 
   p {
-    font-size: 18px;
-    color: #666;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
   }
 }
 
-.vocabulary-btn {
-  background-color: #fff2b2;
-  color: #333;
-
-  &:hover {
-    background-color: #ffe980;
-  }
+.vocabulary-content {
+  margin-top: 20px;
 }
 
 .vocabulary-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 30px;
+  padding: 10px;
 }
 
 .vocabulary-item {
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  background-color: white;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
+  background-color: white;
 
   &:hover {
     transform: translateY(-5px);
@@ -457,37 +448,66 @@ export default {
 }
 
 .vocabulary-word {
-  margin: 0;
-  font-size: 18px;
+  margin: 0 0 5px 0;
+  font-size: 16px;
   font-weight: 500;
   color: #333;
 }
 
-.word-context {
-  padding: 15px;
+.language-tag {
   font-size: 14px;
-  line-height: 1.6;
-  color: #555;
-  max-height: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
+  color: #666;
+  display: inline-block;
+  padding: 2px 6px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  margin-right: 5px;
+}
+
+.word-definition {
+  padding: 15px;
+}
+
+.part-of-speech {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  font-style: italic;
+}
+
+.example {
+  margin-top: 5px;
+  margin-left: 20px;
+  font-size: 14px;
+  color: #666;
+}
+
+.example-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
 }
 
 .word-meta {
   padding: 15px;
   background-color: #f5f5f5;
   border-top: 1px solid #eee;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
 }
 
-.book-info {
-  font-weight: 500;
+.book-info,
+.page-info,
+.date-info {
+  display: inline-block;
+  margin-right: 10px;
+}
+
+.phonetic {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+  font-style: italic;
 }
 </style>

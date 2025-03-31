@@ -6,10 +6,9 @@
       <button @click="nextPage" :disabled="currentPage >= totalPages" class="page-button">
         다음
       </button>
-      <button @click="toggleDebug" class="debug-button">Debug Mode</button>
     </div>
 
-    <div class="pdf-document" ref="pdfContainer" :class="{ 'debug-mode': debugMode }">
+    <div class="pdf-document" ref="pdfContainer">
       <div class="page-container">
         <img ref="pdfImage" v-if="pageDataUrl" :src="pageDataUrl" class="pdf-image" />
         <canvas ref="pdfCanvas" :class="{ hidden: pageDataUrl }"></canvas>
@@ -19,16 +18,6 @@
       <div v-if="isLoading" class="loading-overlay">
         <div class="spinner"></div>
         <p>PDF 로딩 중...</p>
-      </div>
-
-      <div v-if="debugMode" class="debug-info">
-        <p>PDF URL: {{ pdfUrl }}</p>
-        <p>Loading: {{ isLoading }}</p>
-        <p>Pages: {{ totalPages }}</p>
-        <p>Current Page: {{ currentPage }}</p>
-        <p>Rendering: {{ pageRendering }}</p>
-        <p>Image URL: {{ pageDataUrl ? "Set" : "Not set" }}</p>
-        <button @click="renderToImage">Force Render to Image</button>
       </div>
     </div>
   </div>
@@ -63,7 +52,6 @@ export default {
       isLoading: true,
       selectedText: "",
       contextParagraph: "",
-      debugMode: false,
       pageDataUrl: null,
     };
   },
@@ -526,85 +514,7 @@ export default {
 
         try {
           // Get the context paragraph
-          const textLayer = this.$refs.textLayer;
-
-          // Check if selection is within text layer
-          let isSelectionInTextLayer = false;
-          if (selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            const selectionNode = range.commonAncestorContainer;
-
-            // Check if selection is within our text layer
-            let parent = selectionNode;
-            while (parent && parent !== document.body) {
-              if (parent === textLayer) {
-                isSelectionInTextLayer = true;
-                break;
-              }
-              parent = parent.parentNode;
-            }
-          }
-
-          if (!isSelectionInTextLayer) {
-            console.log("Selection is outside text layer, ignoring");
-            return;
-          }
-
-          let contextParagraph = "";
-
-          // Try to get surrounding text at the selection point
-          const range = selection.getRangeAt(0);
-          const selectionNode = range.commonAncestorContainer;
-
-          console.log(
-            "Selection node:",
-            selectionNode.nodeName,
-            "Text content length:",
-            selectionNode.textContent?.length || 0
-          );
-
-          // Find paragraph or section containing the selection
-          if (selectionNode && selectionNode.textContent) {
-            // Check if parent node has more context
-            if (
-              selectionNode.parentNode &&
-              selectionNode.parentNode.textContent &&
-              selectionNode.parentNode.textContent.length > selectionNode.textContent.length
-            ) {
-              contextParagraph = selectionNode.parentNode.textContent.trim();
-              console.log("Using parent node for context, length:", contextParagraph.length);
-            } else {
-              contextParagraph = selectionNode.textContent.trim();
-              console.log("Using selection node for context, length:", contextParagraph.length);
-            }
-          }
-
-          // If still no good context, extract from text layer
-          if (!contextParagraph || contextParagraph === selectedText) {
-            const fullText = textLayer.textContent;
-            const selectionIndex = fullText.indexOf(selectedText);
-
-            if (selectionIndex >= 0) {
-              const contextStart = Math.max(0, selectionIndex - 100);
-              const contextEnd = Math.min(
-                fullText.length,
-                selectionIndex + selectedText.length + 100
-              );
-
-              contextParagraph = fullText.substring(contextStart, contextEnd).trim();
-              console.log("Extracted context from text layer, length:", contextParagraph.length);
-            } else {
-              console.log("Selection not found in text layer content");
-            }
-          }
-
-          this.contextParagraph = contextParagraph || "No context available";
-          console.log(
-            "Final context paragraph:",
-            this.contextParagraph.length > 50
-              ? this.contextParagraph.substring(0, 50) + "..."
-              : this.contextParagraph
-          );
+          this.contextParagraph = this.getContextFromSelection(selection);
 
           // Emit selection event with all the data
           this.$emit("text-selected", {
@@ -626,9 +536,66 @@ export default {
       }
     },
 
-    toggleDebug() {
-      this.debugMode = !this.debugMode;
-      console.log("Debug mode:", this.debugMode);
+    getContextFromSelection(selection) {
+      const textLayer = this.$refs.textLayer;
+
+      // Check if selection is within text layer
+      let isSelectionInTextLayer = false;
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const selectionNode = range.commonAncestorContainer;
+
+        // Check if selection is within our text layer
+        let parent = selectionNode;
+        while (parent && parent !== document.body) {
+          if (parent === textLayer) {
+            isSelectionInTextLayer = true;
+            break;
+          }
+          parent = parent.parentNode;
+        }
+      }
+
+      if (!isSelectionInTextLayer) {
+        console.log("Selection is outside text layer, ignoring");
+        return "No context available";
+      }
+
+      let contextParagraph = "";
+      const selectedText = selection.toString().trim();
+
+      // Try to get surrounding text at the selection point
+      const range = selection.getRangeAt(0);
+      const selectionNode = range.commonAncestorContainer;
+
+      // Find paragraph or section containing the selection
+      if (selectionNode && selectionNode.textContent) {
+        // Check if parent node has more context
+        if (
+          selectionNode.parentNode &&
+          selectionNode.parentNode.textContent &&
+          selectionNode.parentNode.textContent.length > selectionNode.textContent.length
+        ) {
+          contextParagraph = selectionNode.parentNode.textContent.trim();
+        } else {
+          contextParagraph = selectionNode.textContent.trim();
+        }
+      }
+
+      // If still no good context, extract from text layer
+      if (!contextParagraph || contextParagraph === selectedText) {
+        const fullText = textLayer.textContent;
+        const selectionIndex = fullText.indexOf(selectedText);
+
+        if (selectionIndex >= 0) {
+          const contextStart = Math.max(0, selectionIndex - 100);
+          const contextEnd = Math.min(fullText.length, selectionIndex + selectedText.length + 100);
+
+          contextParagraph = fullText.substring(contextStart, contextEnd).trim();
+        }
+      }
+
+      return contextParagraph || "No context available";
     },
   },
   watch: {
@@ -812,36 +779,14 @@ canvas {
 }
 
 .debug-button {
-  margin-left: 20px;
-  background-color: #e0e0e0;
-  color: #333;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-
-  &:hover {
-    background-color: #d0d0d0;
-  }
+  display: none;
 }
 
 .debug-mode {
-  border: 2px solid red;
+  border: none;
 }
 
 .debug-info {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  z-index: 100;
-  max-width: 300px;
-
-  p {
-    margin: 5px 0;
-  }
+  display: none;
 }
 </style>
