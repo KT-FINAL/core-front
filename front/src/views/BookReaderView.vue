@@ -2,7 +2,7 @@
   <div class="book-reader-container">
     <div class="header">
       <div class="elogo-container">
-        <img :src="require('@/assets/Millie_Logo_Eng.png')" alt="Millie Logo Eng" class="elogo" />
+        <img src="@/assets/Millie_Logo_Eng.png" alt="Millie Logo Eng" class="elogo" />
         <span class="plus-sign">+</span>
       </div>
       <div class="user-menu">
@@ -13,7 +13,14 @@
     </div>
 
     <div class="content">
-      <PDFReader :pdfUrl="pdfUrl" :bookId="bookId" />
+      <PDFReader
+        :pdfUrl="pdfUrl"
+        :bookId="bookId"
+        :bookInfo="{
+          title: currentBook?.title || 'Unknown Book',
+          author: currentBook?.author || 'Unknown Author',
+        }"
+      />
     </div>
   </div>
 </template>

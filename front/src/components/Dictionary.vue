@@ -1,13 +1,13 @@
 <template>
   <div class="dictionary-panel" :class="{ 'is-open': isOpen }">
     <div class="dictionary-header">
-      <h3>사전</h3>
+      <h3>텍스트 정보</h3>
       <button @click="$emit('close')" class="close-btn">×</button>
     </div>
 
     <div v-if="loading" class="dictionary-loading">
       <div class="loading-spinner"></div>
-      <p>단어 검색 중...</p>
+      <p>처리 중...</p>
     </div>
 
     <div v-else-if="error" class="dictionary-error">
@@ -15,12 +15,30 @@
       <button @click="$emit('retry')" class="retry-btn">다시 시도</button>
     </div>
 
-    <div v-else-if="!selectedWord" class="dictionary-empty">
-      <p>PDF에서 텍스트를 선택하면 여기에 단어의 뜻이 표시됩니다.</p>
+    <div v-else-if="!selectedText" class="dictionary-empty">
+      <p>PDF에서 텍스트를 선택하면 여기에 정보가 표시됩니다.</p>
     </div>
 
     <div v-else class="dictionary-content">
+      <div class="book-info-section">
+        <h4>책 정보</h4>
+        <p><strong>제목:</strong> {{ bookInfo.title }}</p>
+        <p><strong>저자:</strong> {{ bookInfo.author }}</p>
+        <p><strong>페이지:</strong> {{ pageNumber }}</p>
+      </div>
+
+      <div class="selected-text-section">
+        <h4>선택된 텍스트</h4>
+        <p class="selected-text-content">{{ selectedText }}</p>
+      </div>
+
+      <div class="context-section" v-if="contextParagraph">
+        <h4>문맥</h4>
+        <p class="context-content">{{ contextParagraph }}</p>
+      </div>
+
       <div class="word-header">
+        <h4>사전 정보</h4>
         <h2 class="word">{{ selectedWord }}</h2>
         <div v-if="wordData.phonetic" class="phonetic">{{ wordData.phonetic }}</div>
         <div class="language-tag">{{ isKorean ? "한국어" : "영어" }}</div>
@@ -38,12 +56,8 @@
         </div>
       </div>
 
-      <div v-else class="no-definition">
-        <p>정의를 찾을 수 없습니다.</p>
-      </div>
-
       <div class="dictionary-footer">
-        <button @click="saveWord" class="save-btn">단어장에 저장</button>
+        <button @click="saveSelectionData" class="save-btn">단어장에 저장</button>
       </div>
     </div>
   </div>
@@ -57,6 +71,14 @@ export default {
       type: String,
       default: "",
     },
+    selectedText: {
+      type: String,
+      default: "",
+    },
+    contextParagraph: {
+      type: String,
+      default: "",
+    },
     isOpen: {
       type: Boolean,
       default: false,
@@ -64,6 +86,13 @@ export default {
     bookId: {
       type: String,
       default: "",
+    },
+    bookInfo: {
+      type: Object,
+      default: () => ({
+        title: "Unknown Book",
+        author: "Unknown Author",
+      }),
     },
     pageNumber: {
       type: Number,
@@ -184,6 +213,43 @@ export default {
       // Show confirmation
       alert(`"${this.selectedWord}"가 단어장에 추가되었습니다.`);
     },
+
+    saveSelectionData() {
+      // Create an entry with both word and context
+      const selectionEntry = {
+        word: this.selectedWord,
+        fullSelection: this.selectedText,
+        context: this.contextParagraph,
+        language: this.isKorean ? "ko" : "en",
+        phonetic: this.wordData.phonetic,
+        definition: this.wordData.meanings,
+        bookId: this.bookId,
+        bookTitle: this.bookInfo.title,
+        bookAuthor: this.bookInfo.author,
+        page: this.pageNumber,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Get existing vocabulary from localStorage
+      let vocabulary = [];
+      try {
+        const savedVocabulary = localStorage.getItem("vocabulary");
+        if (savedVocabulary) {
+          vocabulary = JSON.parse(savedVocabulary);
+        }
+      } catch (error) {
+        console.error("Error loading vocabulary:", error);
+      }
+
+      // Add new entry
+      vocabulary.push(selectionEntry);
+
+      // Save back to localStorage
+      localStorage.setItem("vocabulary", JSON.stringify(vocabulary));
+
+      // Show confirmation
+      alert(`선택한 텍스트가 단어장에 추가되었습니다.`);
+    },
   },
 };
 </script>
@@ -288,6 +354,49 @@ export default {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+}
+
+.book-info-section,
+.selected-text-section,
+.context-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.book-info-section h4,
+.selected-text-section h4,
+.context-section h4 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.book-info-section p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.selected-text-content {
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  color: #333;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.context-content {
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .word-header {
