@@ -1,9 +1,15 @@
 <template>
   <div class="pdf-reader-container">
-    <div class="pdf-viewer">
+    <div class="pdf-viewer" @mouseup="handleTextSelection">
       <div v-if="pdfLoaded" class="dual-page-container">
         <!-- Use an object tag with direct URL instead of dynamically creating elements -->
-        <object :data="directPdfUrl" type="application/pdf" class="pdf-object" :key="objectKey">
+        <object
+          :data="directPdfUrl"
+          type="application/pdf"
+          class="pdf-object"
+          :key="objectKey"
+          id="pdf-object"
+        >
           <div class="pdf-fallback">
             <p>
               It appears your browser doesn't support embedded PDFs.
@@ -27,17 +33,45 @@
           </details>
         </div>
       </div>
+
+      <!-- Dictionary lookup button that appears when text is selected -->
+      <div
+        v-if="selectedText && !dictionaryOpen"
+        class="dictionary-lookup-btn"
+        @click="openDictionary"
+      >
+        <span>사전 찾기</span>
+      </div>
     </div>
+
+    <!-- Dictionary panel component -->
+    <Dictionary
+      :selected-word="selectedWord"
+      :is-open="dictionaryOpen"
+      :book-id="bookId"
+      :page-number="currentPage"
+      @close="closeDictionary"
+      @retry="retryDictionaryLookup"
+    />
   </div>
 </template>
 
 <script>
+import Dictionary from "./Dictionary.vue";
+
 export default {
   name: "PDFReader",
+  components: {
+    Dictionary,
+  },
   props: {
     pdfUrl: {
       type: String,
       required: true,
+    },
+    bookId: {
+      type: String,
+      default: "",
     },
   },
   data() {
@@ -45,6 +79,10 @@ export default {
       pdfLoaded: false,
       loadAttempts: 0,
       objectKey: 0, // Used to force object refresh when needed
+      selectedText: "",
+      selectedWord: "",
+      dictionaryOpen: false,
+      currentPage: 1,
     };
   },
   computed: {
@@ -71,6 +109,16 @@ export default {
     setTimeout(() => {
       this.initPdfLoading();
     }, 300);
+
+    // Add event listener for key press to close dictionary with Escape key
+    document.addEventListener("keydown", this.handleKeyPress);
+
+    // Add event listener for page changes in the PDF
+    this.setupPageChangeListener();
+  },
+  beforeUnmount() {
+    // Clean up event listeners
+    document.removeEventListener("keydown", this.handleKeyPress);
   },
   methods: {
     initPdfLoading() {
@@ -111,6 +159,71 @@ export default {
       setTimeout(() => {
         this.pdfLoaded = true;
       }, 300);
+    },
+    handleTextSelection() {
+      // Get the selected text
+      const selection = window.getSelection();
+      const text = selection.toString().trim();
+
+      if (text) {
+        // Store the selected text
+        this.selectedText = text;
+
+        // For dictionary lookup, extract just the single word
+        // Split by any whitespace or punctuation
+        const cleanText = text.replace(/[.,;:!?()"{}[\]]/g, "");
+        const words = cleanText.split(/\s+/);
+        if (words.length > 0) {
+          // Take the first word for dictionary lookup
+          this.selectedWord = words[0];
+          console.log("Selected word for dictionary:", this.selectedWord);
+        }
+      } else {
+        // Clear selection if clicked elsewhere
+        this.selectedText = "";
+
+        // Don't clear selectedWord or close dictionary immediately
+        // to allow interaction with the dictionary panel
+      }
+    },
+    openDictionary() {
+      if (this.selectedWord) {
+        this.dictionaryOpen = true;
+      }
+    },
+    closeDictionary() {
+      this.dictionaryOpen = false;
+    },
+    retryDictionaryLookup() {
+      // Force a retry of the dictionary lookup
+      const currentWord = this.selectedWord;
+      this.selectedWord = "";
+      setTimeout(() => {
+        this.selectedWord = currentWord;
+      }, 10);
+    },
+    handleKeyPress(e) {
+      // Close dictionary panel when Escape key is pressed
+      if (e.key === "Escape" && this.dictionaryOpen) {
+        this.closeDictionary();
+      }
+    },
+    setupPageChangeListener() {
+      // This is a simplified version - in a real implementation you would
+      // use the PDF.js library to get accurate page information
+      // For demo purposes, we'll simulate page tracking
+      const checkPageInterval = setInterval(() => {
+        // This is a placeholder - in reality, you would use PDF.js events
+        // to detect actual page changes in the PDF viewer
+        const randomPage = Math.floor(Math.random() * 200) + 1;
+        this.currentPage = randomPage;
+      }, 30000); // Check every 30 seconds for demo
+
+      // Clean up interval on component unmount
+      this.$options.beforeUnmount = () => {
+        clearInterval(checkPageInterval);
+        document.removeEventListener("keydown", this.handleKeyPress);
+      };
     },
   },
 };
@@ -162,6 +275,7 @@ export default {
   flex-grow: 1;
   padding: 20px;
   margin: 0;
+  position: relative; /* For absolute positioning of dictionary button */
 }
 
 .loading-pdf {
@@ -236,6 +350,28 @@ export default {
   font-size: 14px;
   color: #666;
   margin-bottom: 10px;
+}
+
+/* Dictionary lookup button styling */
+.dictionary-lookup-btn {
+  position: fixed;
+  right: 30px;
+  top: 100px;
+  background-color: #ff5252;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  transition: all 0.2s;
+}
+
+.dictionary-lookup-btn:hover {
+  background-color: #ff3232;
+  transform: translateY(-2px);
 }
 
 @keyframes spin {

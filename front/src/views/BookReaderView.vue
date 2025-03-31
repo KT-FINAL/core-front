@@ -13,7 +13,7 @@
     </div>
 
     <div class="content">
-      <PDFReader :pdfUrl="pdfUrl" />
+      <PDFReader :pdfUrl="pdfUrl" :bookId="bookId" />
     </div>
   </div>
 </template>
@@ -113,6 +113,7 @@ export default {
       userName,
       handleLogout,
       pdfUrl,
+      bookId,
     };
   },
 };
