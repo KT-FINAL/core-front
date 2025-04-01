@@ -5,6 +5,7 @@ import MyLibraryView from "../views/MyLibraryView.vue";
 import BookReaderView from "../views/BookReaderView.vue";
 import VocabularyView from "../views/VocabularyView.vue";
 import SubscriptionView from "../views/SubscriptionView.vue";
+import PaymentView from "@/views/PaymentView.vue";
 
 const routes = [
   {
@@ -59,6 +60,11 @@ const routes = [
       requiresAuth: false,
       title: "프리미엄 구독 | 밀리의 서재",
     },
+  },
+  {
+    path: "/payment",
+    name: "payment",
+    component: PaymentView,
   },
 ];
 
