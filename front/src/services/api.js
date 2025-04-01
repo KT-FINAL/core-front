@@ -58,6 +58,16 @@ export const vocabularyService = {
     }
   },
 
+  // 단어 저장
+  saveWord: async (wordData) => {
+    try {
+      const response = await api.post("/api/v1/vocabulary", wordData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // 단어 삭제
   deleteWord: async (wordId) => {
     try {

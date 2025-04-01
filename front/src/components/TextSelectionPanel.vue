@@ -70,6 +70,9 @@
 </template>
 
 <script>
+import { vocabularyService } from "@/services/api";
+import { ElMessage } from "element-plus";
+
 export default {
   name: "TextSelectionPanel",
   props: {
@@ -126,18 +129,28 @@ export default {
     };
   },
   methods: {
-    handleSave() {
-      const selectionData = {
-        bookId: this.actualBookInfo.id,
-        bookTitle: this.actualBookInfo.title,
-        author: this.actualBookInfo.author,
-        pageNumber: this.actualPage,
-        selectedText: this.actualText,
-        contextParagraph: this.actualContext,
-        timestamp: new Date().toISOString(),
-      };
+    async handleSave() {
+      if (!this.wordAnalysis || typeof this.wordAnalysis === "string") {
+        ElMessage.error("단어 분석이 완료되지 않았습니다.");
+        return;
+      }
 
-      this.$emit("save", selectionData);
+      try {
+        const wordData = {
+          word: this.actualText,
+          meaning: this.wordAnalysis.meaning || "",
+          example: this.wordAnalysis.examples?.[0] || "",
+          antonym: this.wordAnalysis.antonyms || "",
+          synonym: this.wordAnalysis.synonyms || "",
+        };
+
+        await vocabularyService.saveWord(wordData);
+        ElMessage.success("단어가 저장되었습니다.");
+        this.$emit("close");
+      } catch (error) {
+        console.error("단어 저장 에러:", error);
+        ElMessage.error("단어 저장에 실패했습니다.");
+      }
     },
     async analyzeWord() {
       if (!this.actualText || this.actualText.trim().length === 0) {
