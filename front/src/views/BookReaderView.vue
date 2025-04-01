@@ -25,7 +25,7 @@
         :bookInfo="bookInfo"
         :pageNumber="currentPage"
         @close="clearSelection"
-        @save="saveSelection"
+        @wordSaved="handleWordSaved"
       />
     </main>
   </div>
@@ -126,15 +126,10 @@ export default {
       this.contextParagraph = "";
     },
 
-    saveSelection(selectionData) {
-      // In production, this would save to your API
-      console.log("Saving selection to backend:", selectionData);
-
-      // Show success message
-      this.$nextTick(() => {
-        alert("선택 내용이 저장되었습니다.");
-        this.clearSelection();
-      });
+    handleWordSaved() {
+      // 단어 저장 후 선택된 텍스트 초기화하지 않음
+      // this.selectedText = "";
+      // this.contextParagraph = "";
     },
 
     goBack() {

@@ -146,7 +146,8 @@ export default {
 
         await vocabularyService.saveWord(wordData);
         ElMessage.success("단어가 저장되었습니다.");
-        this.$emit("close");
+        // 저장 후 wordSaved 이벤트만 발생시키고 분석 결과는 유지
+        this.$emit("wordSaved", wordData);
       } catch (error) {
         console.error("단어 저장 에러:", error);
         ElMessage.error("단어 저장에 실패했습니다.");
@@ -206,6 +207,16 @@ export default {
   mounted() {
     // Automatically analyze word when component is mounted
     this.analyzeWord();
+  },
+  watch: {
+    selectedText: {
+      handler(newText) {
+        if (newText && newText.trim().length > 0) {
+          this.analyzeWord();
+        }
+      },
+      immediate: true,
+    },
   },
 };
 </script>
