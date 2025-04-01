@@ -3,6 +3,7 @@ import LoginView from "../views/LoginView.vue";
 import SignupView from "../views/SignupView.vue";
 import MyLibraryView from "../views/MyLibraryView.vue";
 import BookReaderView from "../views/BookReaderView.vue";
+import VocabularyView from "../views/VocabularyView.vue";
 
 const routes = [
   {
@@ -39,6 +40,15 @@ const routes = [
       title: "책 읽기 | 밀리의 서재",
     },
     props: true,
+  },
+  {
+    path: "/vocabulary",
+    name: "vocabulary",
+    component: VocabularyView,
+    meta: {
+      requiresAuth: true,
+      title: "단어장 | 밀리의 서재",
+    },
   },
 ];
 

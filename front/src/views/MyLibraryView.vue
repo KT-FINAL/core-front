@@ -53,34 +53,27 @@
       </div>
 
       <div v-if="activeTab === 'vocabulary'" class="vocabulary-content">
-        <div v-if="vocabulary.length === 0" class="empty-vocabulary">
+        <div v-if="loading" class="loading">
+          <el-loading :fullscreen="false" />
+        </div>
+        <div v-else-if="error" class="error">
+          {{ error }}
+        </div>
+        <div v-else-if="vocabulary.length === 0" class="empty-vocabulary">
           <p>아직 저장된 단어가 없습니다.</p>
           <button class="browse-books-btn">책을 읽고 단어 추가하기</button>
         </div>
         <div v-else class="vocabulary-list">
-          <div v-for="(entry, index) in vocabulary" :key="index" class="vocabulary-item">
+          <div v-for="word in vocabulary" :key="word.id" class="vocabulary-item">
             <div class="word-header">
-              <h3 class="vocabulary-word">{{ entry.word }}</h3>
-              <span class="language-tag">{{ entry.language === "ko" ? "한국어" : "영어" }}</span>
-              <div v-if="entry.phonetic" class="phonetic">{{ entry.phonetic }}</div>
+              <h3 class="vocabulary-word">{{ word.word }}</h3>
+              <el-button type="danger" size="small" @click="handleDelete(word.id)">삭제</el-button>
             </div>
-            <div class="word-definition">
-              <div v-for="(meaning, mIndex) in entry.definition" :key="mIndex">
-                <p class="part-of-speech">{{ meaning.partOfSpeech }}</p>
-                <ul>
-                  <li v-for="(def, dIndex) in meaning.definitions" :key="dIndex">
-                    {{ def.definition }}
-                    <div v-if="def.example" class="example">
-                      <span class="example-label">예시:</span> {{ def.example }}
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div class="word-meta">
-              <span class="book-info">책: {{ entry.bookId }}</span>
-              <span class="page-info">페이지: {{ entry.page }}</span>
-              <span class="date-info">저장일: {{ formatDate(entry.timestamp) }}</span>
+            <div class="word-content">
+              <p><strong>의미:</strong> {{ word.mean }}</p>
+              <p><strong>예문:</strong> {{ word.example }}</p>
+              <p><strong>동의어:</strong> {{ word.synonym }}</p>
+              <p><strong>반의어:</strong> {{ word.antonym }}</p>
             </div>
           </div>
         </div>
@@ -90,7 +83,8 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { vocabularyService, userService } from "@/services/api";
+import { ElMessage } from "element-plus";
 
 export default {
   name: "MyLibraryView",
@@ -128,63 +122,83 @@ export default {
         },
       ],
       vocabulary: [],
+      loading: false,
+      error: null,
+      userName: "User", // 기본값 설정
     };
   },
   computed: {
-    ...mapGetters(["userName"]),
+    // userName getter 제거
   },
-  mounted() {
-    // Check if we have extracted covers in localStorage
+  watch: {
+    activeTab: {
+      immediate: true,
+      handler(newTab) {
+        if (newTab === "vocabulary") {
+          this.fetchVocabulary();
+        }
+      },
+    },
+  },
+  async mounted() {
     this.checkForExtractedCovers();
-    // Load vocabulary from localStorage
-    this.loadVocabulary();
+    await this.fetchUserInfo();
   },
   methods: {
     handleLogout() {
-      // Just clear local user data without requiring backend
       localStorage.removeItem("user");
-      // Redirect to login page
+      localStorage.removeItem("token"); // 토큰도 삭제
       this.$router.push("/");
+    },
+    async fetchUserInfo() {
+      try {
+        const userInfo = await userService.getUserInfo();
+        this.userName = userInfo.name;
+      } catch (error) {
+        console.error("사용자 정보 로딩 에러:", error);
+        ElMessage.error("사용자 정보를 불러오는데 실패했습니다.");
+      }
     },
     openBook(bookId) {
       this.$router.push(`/book/${bookId}`);
     },
     checkForExtractedCovers() {
-      // For each book, check if we have an extracted cover in localStorage
       this.books.forEach((book) => {
         const savedCover = localStorage.getItem(`book_cover_${book.id}`);
         if (savedCover) {
-          // Use the extracted cover instead of the default one
           book.extractedCover = savedCover;
         }
       });
     },
-    loadVocabulary() {
+    async fetchVocabulary() {
       try {
-        // Load vocabulary from localStorage
-        const savedVocabulary = localStorage.getItem("vocabulary");
-        if (savedVocabulary) {
-          this.vocabulary = JSON.parse(savedVocabulary);
-          // Sort by timestamp (most recent first)
-          this.vocabulary.sort((a, b) => {
-            return new Date(b.timestamp) - new Date(a.timestamp);
-          });
-        }
+        this.loading = true;
+        this.error = null;
+        const response = await vocabularyService.getVocabularyList();
+        this.vocabulary = Array.isArray(response) ? response : [];
       } catch (error) {
-        console.error("Error loading vocabulary:", error);
-        this.vocabulary = [];
+        console.error("단어장 로딩 에러:", error);
+        this.error = "단어장을 불러오는데 실패했습니다.";
+        ElMessage.error("단어장을 불러오는데 실패했습니다.");
+      } finally {
+        this.loading = false;
       }
     },
-    formatDate(timestamp) {
+    async handleDelete(wordId) {
       try {
-        const date = new Date(timestamp);
-        return date.toLocaleDateString("ko-KR", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
+        await this.$confirm("이 단어를 삭제하시겠습니까?", "단어 삭제", {
+          confirmButtonText: "삭제",
+          cancelButtonText: "취소",
+          type: "warning",
         });
+        await vocabularyService.deleteWord(wordId);
+        ElMessage.success("단어가 삭제되었습니다.");
+        await this.fetchVocabulary(); // 목록 새로고침
       } catch (error) {
-        return timestamp;
+        if (error !== "cancel") {
+          console.error("단어 삭제 에러:", error);
+          ElMessage.error("단어 삭제에 실패했습니다.");
+        }
       }
     },
   },
@@ -530,5 +544,32 @@ export default {
   color: #666;
   margin-top: 5px;
   font-style: italic;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.error {
+  color: #f56c6c;
+  text-align: center;
+  padding: 20px;
+}
+
+.word-content {
+  padding: 15px;
+  line-height: 1.6;
+}
+
+.word-content p {
+  margin: 8px 0;
+}
+
+.word-content strong {
+  color: #606266;
+  margin-right: 8px;
 }
 </style>
