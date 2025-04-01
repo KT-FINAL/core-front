@@ -35,6 +35,7 @@
         </div>
         <div v-else class="books-grid">
           <div v-for="book in books" :key="book.id" class="book-card">
+            <button @click="deleteBook(book.id)" class="delete-book-btn">&times;</button>
             <div class="book-cover">
               <img v-if="book.extractedCover" :src="book.extractedCover" :alt="book.title" />
               <img v-else-if="book.coverImage" :src="book.coverImage" :alt="book.title" />
@@ -199,6 +200,15 @@ export default {
           console.error("단어 삭제 에러:", error);
           ElMessage.error("단어 삭제에 실패했습니다.");
         }
+      }
+    },
+    deleteBook(bookId) {
+      if (confirm("이 책을 내 서재에서 삭제하시겠습니까?")) {
+        // Filter out the book with the matching ID
+        this.books = this.books.filter((book) => book.id !== bookId);
+        // Remove the extracted cover from localStorage
+        localStorage.removeItem(`book_cover_${bookId}`);
+        ElMessage.success("책이 내 서재에서 삭제되었습니다.");
       }
     },
   },
@@ -379,10 +389,42 @@ export default {
   transition: transform 0.2s, box-shadow 0.2s;
   background-color: white;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  &:hover .delete-book-btn {
+    opacity: 1;
+  }
+}
+
+.delete-book-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.8);
+  color: #ff5252;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.2s, background-color 0.2s;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 1);
   }
 }
 
@@ -393,6 +435,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  flex-shrink: 0;
 
   img {
     width: 100%;
@@ -403,6 +446,10 @@ export default {
 
 .book-info {
   padding: 15px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 120px;
 }
 
 .book-title {
@@ -410,16 +457,26 @@ export default {
   font-size: 16px;
   font-weight: 500;
   color: #333;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 40px;
 }
 
 .book-author {
   margin: 0 0 15px 0;
   font-size: 14px;
   color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .read-book-btn {
   width: 100%;
+  height: 40px;
   padding: 10px 0;
   background-color: #fff2b2;
   color: #333;
@@ -428,6 +485,7 @@ export default {
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
+  margin-top: auto;
 
   &:hover {
     background-color: #ffe980;
