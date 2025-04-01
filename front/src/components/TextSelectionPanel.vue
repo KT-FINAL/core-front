@@ -21,29 +21,42 @@
           {{ wordAnalysis }}
         </div>
         <div v-else>
-          <!-- Word and part of speech -->
-          <div v-if="wordAnalysis.part_of_speech" class="part-of-speech">
-            <span class="pos-tag">{{ wordAnalysis.part_of_speech }}</span>
-            <span v-if="wordAnalysis.origin" class="origin-tag">{{ wordAnalysis.origin }}</span>
+          <!-- Meaning -->
+          <div v-if="wordAnalysis.meaning" class="definitions">
+            <h4>의미:</h4>
+            <p>{{ wordAnalysis.meaning }}</p>
           </div>
 
-          <!-- Definitions -->
-          <div
-            v-if="wordAnalysis.definitions && wordAnalysis.definitions.length > 0"
-            class="definitions"
-          >
-            <h4>의미:</h4>
+          <!-- Examples -->
+          <div v-if="wordAnalysis.examples && wordAnalysis.examples.length > 0" class="example">
+            <h4>예문:</h4>
             <ul>
-              <li v-for="(def, index) in wordAnalysis.definitions" :key="index">
-                {{ def }}
+              <li
+                v-for="(example, index) in wordAnalysis.examples"
+                :key="index"
+                class="example-text"
+              >
+                {{ example }}
               </li>
             </ul>
           </div>
 
-          <!-- Usage Example -->
-          <div v-if="wordAnalysis.usage_example" class="example">
-            <h4>예문:</h4>
-            <p class="example-text">{{ wordAnalysis.usage_example }}</p>
+          <!-- Synonyms -->
+          <div v-if="wordAnalysis.synonyms" class="synonyms">
+            <h4>유의어:</h4>
+            <p>{{ wordAnalysis.synonyms }}</p>
+          </div>
+
+          <!-- Antonyms -->
+          <div v-if="wordAnalysis.antonyms" class="antonyms">
+            <h4>반의어:</h4>
+            <p>{{ wordAnalysis.antonyms }}</p>
+          </div>
+
+          <!-- Related words -->
+          <div v-if="wordAnalysis.related_words" class="related-words">
+            <h4>관련 단어:</h4>
+            <p>{{ wordAnalysis.related_words }}</p>
           </div>
         </div>
       </div>
@@ -332,6 +345,15 @@ export default {
         line-height: 1.5;
       }
     }
+
+    p {
+      margin: 0 0 15px;
+      line-height: 1.5;
+      font-size: 14px;
+      background-color: #f9f9f9;
+      padding: 10px;
+      border-radius: 4px;
+    }
   }
 
   .error-message {
@@ -342,6 +364,8 @@ export default {
   }
 
   .example {
+    margin-bottom: 15px;
+
     h4 {
       margin: 0 0 10px;
       color: #333;
@@ -357,6 +381,42 @@ export default {
       font-size: 14px;
       line-height: 1.5;
     }
+
+    ul {
+      margin: 0;
+      padding-left: 0;
+      list-style: none;
+    }
+  }
+
+  .synonyms,
+  .antonyms,
+  .related-words {
+    margin-bottom: 15px;
+
+    h4 {
+      margin: 0 0 10px;
+      color: #333;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    p {
+      background-color: #eef7ff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 0;
+      font-size: 14px;
+      display: inline-block;
+    }
+  }
+
+  .antonyms p {
+    background-color: #ffeeee;
+  }
+
+  .related-words p {
+    background-color: #f0f7ed;
   }
 }
 
