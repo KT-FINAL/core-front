@@ -146,7 +146,10 @@ export default {
 
         await vocabularyService.saveWord(wordData);
         ElMessage.success("단어가 저장되었습니다.");
-        this.$emit("close");
+        // 저장 후 입력 필드 초기화
+        this.$emit("wordSaved", wordData);
+        this.wordAnalysis = null;
+        this.isAnalysisLoading = false;
       } catch (error) {
         console.error("단어 저장 에러:", error);
         ElMessage.error("단어 저장에 실패했습니다.");
@@ -206,6 +209,16 @@ export default {
   mounted() {
     // Automatically analyze word when component is mounted
     this.analyzeWord();
+  },
+  watch: {
+    selectedText: {
+      handler(newText) {
+        if (newText && newText.trim().length > 0) {
+          this.analyzeWord();
+        }
+      },
+      immediate: true,
+    },
   },
 };
 </script>
