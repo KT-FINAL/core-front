@@ -26,6 +26,9 @@
 <script>
 import * as pdfjsLib from "pdfjs-dist";
 
+// Add a CSS class to help with text highlighting
+const TEXT_LAYER_CLASS = "textLayer";
+
 export default {
   name: "PDFViewer",
   props: {
@@ -53,6 +56,8 @@ export default {
       selectedText: "",
       contextParagraph: "",
       pageDataUrl: null,
+      // Add a reference to track the active text layer renderer
+      textLayerRenderer: null,
     };
   },
   mounted() {
@@ -280,123 +285,177 @@ export default {
         console.log(`Getting page ${pageNum} from PDF`);
         const page = await this.pdfDoc.getPage(pageNum);
 
-        // Fix viewport calculation with explicit numeric scale
-        const fixedScale = 1.5; // Use a fixed scale value
-        const viewport = page.getViewport({ scale: fixedScale });
-
+        // Create a viewport with exact scale to ensure consistent rendering
+        const viewport = page.getViewport({ scale: this.scale });
         console.log(`Viewport dimensions: ${viewport.width} x ${viewport.height}`);
 
-        // Create an off-screen canvas with the right dimensions
+        // Set up canvas for PDF rendering
+        const canvas = this.$refs.pdfCanvas;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const canvasContext = canvas.getContext("2d", { alpha: false });
+
+        // Set white background for better visibility
+        canvasContext.fillStyle = "white";
+        canvasContext.fillRect(0, 0, viewport.width, viewport.height);
+
+        // Clear and prepare the text layer container
+        const textLayerDiv = this.$refs.textLayer;
+        textLayerDiv.innerHTML = "";
+        textLayerDiv.className = TEXT_LAYER_CLASS;
+
+        // Set exact dimensions to match the viewport
+        textLayerDiv.style.width = `${viewport.width}px`;
+        textLayerDiv.style.height = `${viewport.height}px`;
+        textLayerDiv.style.position = "absolute";
+        textLayerDiv.style.left = "0";
+        textLayerDiv.style.top = "0";
+        textLayerDiv.style.right = "0";
+        textLayerDiv.style.bottom = "0";
+
+        // First render the PDF page to the canvas
+        const renderContext = {
+          canvasContext: canvasContext,
+          viewport: viewport,
+          enableWebGL: false,
+          renderInteractiveForms: false,
+        };
+
+        console.log("Starting page render");
+        const renderTask = page.render(renderContext);
+
+        // Wait for the page to finish rendering
+        await renderTask.promise;
+        console.log("Page rendered successfully");
+
+        // Now get the text content for the text layer
+        const textContent = await page.getTextContent();
+        console.log(`Got text content with ${textContent.items.length} text items`);
+
+        // Recreate the offscreen canvas for image data URL
         const offscreenCanvas = document.createElement("canvas");
         offscreenCanvas.width = viewport.width;
         offscreenCanvas.height = viewport.height;
         const offscreenCtx = offscreenCanvas.getContext("2d", { alpha: false });
+        offscreenCtx.drawImage(canvas, 0, 0);
 
-        // Set white background
-        offscreenCtx.fillStyle = "white";
-        offscreenCtx.fillRect(0, 0, viewport.width, viewport.height);
-
-        console.log(
-          `Rendering to offscreen canvas: ${offscreenCanvas.width} x ${offscreenCanvas.height}`
-        );
-
-        // Render PDF page to offscreen canvas
         try {
-          const renderTask = page.render({
-            canvasContext: offscreenCtx,
-            viewport: viewport,
-          });
-
-          await renderTask.promise;
-          console.log("Page rendered to offscreen canvas");
-
-          // Generate image data URL directly from offscreen canvas
-          try {
-            const dataUrl = offscreenCanvas.toDataURL("image/png");
-            console.log("Generated data URL from offscreen canvas");
-            this.pageDataUrl = dataUrl;
-          } catch (dataUrlError) {
-            console.error("Error generating data URL:", dataUrlError);
-          }
-        } catch (renderError) {
-          console.error("Error rendering to offscreen canvas:", renderError);
+          // Generate data URL for the image
+          this.pageDataUrl = offscreenCanvas.toDataURL("image/png");
+          console.log("Generated data URL from canvas");
+        } catch (dataUrlError) {
+          console.error("Error generating data URL:", dataUrlError);
         }
 
-        // Set up the component's canvas for compatibility
-        const canvas = this.$refs.pdfCanvas;
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        // Text layer for selections
-        const textLayer = this.$refs.textLayer;
-        textLayer.style.width = `${viewport.width}px`;
-        textLayer.style.height = `${viewport.height}px`;
-        textLayer.innerHTML = "";
-
-        // Ensure text layer is positioned correctly relative to the image
-        textLayer.style.position = "absolute";
-
-        // Wait for the image to be rendered before calculating text layer positioning
-        this.$nextTick(() => {
-          const pdfImage = this.$refs.pdfImage;
-          if (pdfImage) {
-            // Position text layer to match the image position and dimensions
-            textLayer.style.width = `${pdfImage.clientWidth}px`;
-            textLayer.style.height = `${pdfImage.clientHeight}px`;
-
-            // Calculate position
-            const imageRect = pdfImage.getBoundingClientRect();
-            const containerRect = this.$refs.pdfContainer.getBoundingClientRect();
-
-            // Set position relative to container
-            textLayer.style.left = `${imageRect.left - containerRect.left}px`;
-            textLayer.style.top = `${imageRect.top - containerRect.top}px`;
-            textLayer.style.transform = "none";
-
-            console.log(
-              "Text layer positioned to match image:",
-              `left: ${textLayer.style.left}, top: ${textLayer.style.top}, ` +
-                `width: ${textLayer.style.width}, height: ${textLayer.style.height}`
-            );
-          }
-        });
-
-        // Get the text content
+        // Now render the text layer
         try {
-          console.log("Getting text content");
-          const textContent = await page.getTextContent();
-          console.log("Text content received, rendering text layer");
+          // Cancel any existing text layer rendering
+          if (this.textLayerRenderer) {
+            if (typeof this.textLayerRenderer.cancel === "function") {
+              this.textLayerRenderer.cancel();
+            }
+            this.textLayerRenderer = null;
+          }
 
-          // Render text layer with correct positioning
-          try {
-            // For newer PDF.js versions
-            if (pdfjsLib.renderTextLayer) {
-              pdfjsLib.renderTextLayer({
-                textContent: textContent,
-                container: textLayer,
-                viewport: viewport,
-                textDivs: [],
-              });
-            } else {
-              // Just append text spans manually as a fallback
-              textContent.items.forEach((item) => {
+          console.log("Setting up text layer");
+
+          // Use the most appropriate text layer implementation based on PDF.js version
+          if (pdfjsLib.TextLayerBuilder) {
+            console.log("Using TextLayerBuilder");
+
+            // Create and configure the text layer builder
+            this.textLayerRenderer = new pdfjsLib.TextLayerBuilder({
+              textLayerDiv: textLayerDiv,
+              pageIndex: page.pageNumber - 1,
+              viewport: viewport,
+              enhanceTextSelection: true,
+            });
+
+            // Set the text content and render
+            this.textLayerRenderer.setTextContent(textContent);
+            this.textLayerRenderer.render();
+          } else if (pdfjsLib.renderTextLayer) {
+            console.log("Using renderTextLayer API");
+
+            // Use the newer renderTextLayer API
+            const renderTextLayerParams = {
+              textContent: textContent,
+              container: textLayerDiv,
+              viewport: viewport,
+              textDivs: [],
+              enhanceTextSelection: true,
+            };
+
+            this.textLayerRenderer = pdfjsLib.renderTextLayer(renderTextLayerParams);
+            await this.textLayerRenderer.promise;
+          } else {
+            console.warn("PDF.js text layer features not available, using basic implementation");
+
+            // Basic text layer implementation as fallback
+            const textItems = textContent.items;
+
+            // Group text items by their vertical position to form 'paragraphs'
+            const paragraphs = {};
+
+            textItems.forEach((item) => {
+              // Extract the transform matrix
+              const transform = item.transform;
+              const y = Math.round(transform[5]); // Vertical position
+
+              // Group by vertical position (y-coordinate)
+              if (!paragraphs[y]) {
+                paragraphs[y] = [];
+              }
+              paragraphs[y].push(item);
+            });
+
+            // Sort paragraphs by vertical position
+            const sortedYPositions = Object.keys(paragraphs).sort(
+              (a, b) => parseFloat(a) - parseFloat(b)
+            );
+
+            // Create spans for each text item, grouped by paragraph
+            sortedYPositions.forEach((y) => {
+              const paraItems = paragraphs[y].sort((a, b) => a.transform[4] - b.transform[4]);
+
+              // Create a paragraph container
+              const paraDiv = document.createElement("div");
+              paraDiv.style.position = "absolute";
+              paraDiv.style.top = `${y}px`;
+              paraDiv.style.left = "0";
+              paraDiv.style.width = "100%";
+              paraDiv.style.transformOrigin = "0% 0%";
+
+              // Add all text items in this paragraph
+              paraItems.forEach((item) => {
+                const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+
                 const span = document.createElement("span");
                 span.textContent = item.str;
                 span.style.position = "absolute";
-                const [a, b, c, d, e, f] = item.transform;
-                span.style.transform = `matrix(${a}, ${b}, ${c}, ${d}, ${e}, ${f})`;
-                textLayer.appendChild(span);
+                span.style.left = `${tx[4]}px`;
+                span.style.fontSize = `${Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]) * 100}%`;
+                span.style.fontFamily = item.fontName || "sans-serif";
+                span.style.color = "transparent";
+
+                paraDiv.appendChild(span);
               });
-            }
-            console.log("Text layer rendered successfully");
-          } catch (textLayerError) {
-            console.error("Error rendering text layer:", textLayerError);
+
+              textLayerDiv.appendChild(paraDiv);
+            });
           }
-        } catch (textContentError) {
-          console.error("Error getting text content:", textContentError);
+
+          // Make text selectable but keep it visually transparent
+          textLayerDiv.style.color = "transparent";
+          textLayerDiv.style.pointerEvents = "auto";
+          textLayerDiv.classList.add("pdf-text-layer");
+
+          console.log("Text layer setup complete");
+        } catch (textLayerError) {
+          console.error("Error setting up text layer:", textLayerError);
         }
 
-        // Make sure loading and rendering states are updated
+        // Update rendering state
         this.pageRendering = false;
         console.log(`Finished rendering page ${pageNum}, pageRendering set to false`);
 
@@ -722,26 +781,30 @@ canvas {
 }
 
 .text-layer {
-  position: absolute !important;
-  color: transparent;
-  pointer-events: all;
-  z-index: 3;
-  overflow: hidden !important;
-  user-select: text !important;
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  -ms-user-select: text !important;
+  position: absolute;
+  text-align: initial;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  line-height: 1;
+  opacity: 1;
 
+  // Make text transparent but highlight visible on selection
+  & > div,
   & > span {
-    position: absolute;
     color: transparent;
+    position: absolute;
+    white-space: pre;
     cursor: text;
-    white-space: pre !important;
+    transform-origin: 0% 0%;
+  }
 
-    &::selection {
-      background-color: rgba(255, 242, 178, 0.5) !important;
-      color: transparent;
-    }
+  // Highlight all selections within the text layer
+  ::selection {
+    background-color: rgba(255, 220, 105, 0.8) !important;
+    color: transparent;
   }
 }
 
@@ -788,5 +851,63 @@ canvas {
 
 .debug-info {
   display: none;
+}
+
+.pdf-text-layer {
+  position: absolute !important;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 1;
+  line-height: 1;
+  z-index: 3;
+  color: transparent;
+
+  & > span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+
+    &::selection {
+      background-color: rgba(255, 242, 178, 0.5) !important;
+      color: transparent;
+    }
+  }
+}
+
+// Override text layer styles from pdf.js, if needed
+:deep(.textLayer) {
+  // Make text invisible but ensure highlights are clearly visible
+  opacity: 1;
+  color: transparent;
+
+  & > div,
+  & > span {
+    position: absolute !important;
+    color: transparent !important;
+    transform-origin: 0% 0%;
+
+    &::selection {
+      background-color: rgba(255, 220, 105, 0.8) !important;
+      color: transparent;
+    }
+  }
+}
+
+// Add global selection style for text in PDF viewer
+::v-deep(.pdf-document *::selection) {
+  background-color: rgba(255, 220, 105, 0.8) !important;
+  color: transparent;
+}
+
+// Ensure text highlighting works during drag operations
+.pdf-text-layer ::selection,
+.text-layer ::selection {
+  background-color: rgba(255, 220, 105, 0.8) !important;
+  color: transparent;
 }
 </style>
