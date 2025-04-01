@@ -569,29 +569,86 @@ export default {
 
       if (selectedText) {
         console.log("Text selected:", selectedText);
-        this.selectedText = selectedText;
+        this.processSelection(selection, selectedText, this.currentPage);
+      }
+    },
 
-        try {
-          // Get the context paragraph
-          this.contextParagraph = this.getContextFromSelection(selection);
+    // Handle selection on left page
+    handleLeftPageSelection() {
+      const selection = window.getSelection();
+      const selectedText = selection.toString().trim();
 
-          // Emit selection event with all the data
-          this.$emit("text-selected", {
-            text: this.selectedText,
-            paragraph: this.contextParagraph,
-            page: this.currentPage,
-            bookInfo: this.bookInfo,
+      if (selectedText) {
+        console.log("Text selected on left page:", selectedText);
+        this.processSelection(selection, selectedText, this.currentPage * 2 - 1);
+      }
+    },
+
+    // Handle selection on right page
+    handleRightPageSelection() {
+      const selection = window.getSelection();
+      const selectedText = selection.toString().trim();
+
+      if (selectedText) {
+        console.log("Text selected on right page:", selectedText);
+        this.processSelection(selection, selectedText, this.currentPage * 2);
+      }
+    },
+
+    // Process selection and emit event
+    processSelection(selection, selectedText, pageNumber) {
+      this.selectedText = selectedText;
+
+      try {
+        // Find the paragraph containing the selection
+        const contextParagraph = this.getContextFromSelection(selection);
+        this.contextParagraph = contextParagraph;
+
+        const selectionData = {
+          text: this.selectedText,
+          paragraph: this.contextParagraph,
+          page: pageNumber,
+          bookInfo: this.bookInfo,
+        };
+
+        // Force layout recalculation before showing the panel
+        // This ensures the side-by-side layout is correctly applied
+        document.body.offsetHeight; // Force reflow
+
+        // Apply changes in next tick to avoid layout issues
+        this.$nextTick(() => {
+          this.selectionData = selectionData;
+
+          // Force the DOM to update before showing the panel
+          this.$nextTick(() => {
+            this.textSelectionActive = true;
+            // Emit selection event with all the data
+            this.$emit("text-selected", selectionData);
           });
-        } catch (error) {
-          console.error("Error processing text selection:", error);
-          // Still emit even if there was an error extracting context
-          this.$emit("text-selected", {
-            text: this.selectedText,
-            paragraph: "Error getting context",
-            page: this.currentPage,
-            bookInfo: this.bookInfo,
+        });
+      } catch (error) {
+        console.error("Error processing text selection:", error);
+        const selectionData = {
+          text: this.selectedText,
+          paragraph: "Error getting context",
+          page: pageNumber,
+          bookInfo: this.bookInfo,
+        };
+
+        // Force layout recalculation before showing the panel
+        document.body.offsetHeight; // Force reflow
+
+        // Apply changes in next tick to avoid layout issues
+        this.$nextTick(() => {
+          this.selectionData = selectionData;
+
+          // Force the DOM to update before showing the panel
+          this.$nextTick(() => {
+            this.textSelectionActive = true;
+            // Emit selection event with all the data
+            this.$emit("text-selected", selectionData);
           });
-        }
+        });
       }
     },
 
