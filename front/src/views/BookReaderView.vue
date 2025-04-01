@@ -127,9 +127,9 @@ export default {
     },
 
     handleWordSaved() {
-      // 단어 저장 후 선택된 텍스트 초기화
-      this.selectedText = "";
-      this.contextParagraph = "";
+      // 단어 저장 후 선택된 텍스트 초기화하지 않음
+      // this.selectedText = "";
+      // this.contextParagraph = "";
     },
 
     goBack() {

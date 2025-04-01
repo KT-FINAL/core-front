@@ -146,10 +146,8 @@ export default {
 
         await vocabularyService.saveWord(wordData);
         ElMessage.success("단어가 저장되었습니다.");
-        // 저장 후 입력 필드 초기화
+        // 저장 후 wordSaved 이벤트만 발생시키고 분석 결과는 유지
         this.$emit("wordSaved", wordData);
-        this.wordAnalysis = null;
-        this.isAnalysisLoading = false;
       } catch (error) {
         console.error("단어 저장 에러:", error);
         ElMessage.error("단어 저장에 실패했습니다.");
