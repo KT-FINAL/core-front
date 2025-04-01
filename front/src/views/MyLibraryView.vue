@@ -22,8 +22,11 @@
         >
           내 단어장
         </h1>
+        <h1 @click="activeTab = 'search'" :class="['tab', { active: activeTab === 'search' }]">
+          검색
+        </h1>
       </div>
-      <p class="welcome-message">
+      <p class="welcome-message" v-if="activeTab !== 'search'">
         {{ userName }}님이 저장한 {{ activeTab === "library" ? "책이 " : "단어가 " }} 여기에
         표시됩니다.
       </p>
@@ -31,7 +34,7 @@
       <div v-if="activeTab === 'library'" class="library-content">
         <div v-if="books.length === 0" class="empty-library">
           <p>아직 저장된 책이 없습니다.</p>
-          <button class="browse-books-btn">책 둘러보기</button>
+          <button class="browse-books-btn" @click="activeTab = 'search'">책 둘러보기</button>
         </div>
         <div v-else class="books-grid">
           <div v-for="book in books" :key="book.id" class="book-card">
@@ -47,7 +50,9 @@
             <div class="book-info">
               <h3 class="book-title">{{ book.title }}</h3>
               <p class="book-author">{{ book.author }}</p>
-              <button @click="openBook(book.id)" class="read-book-btn">읽기</button>
+              <div class="book-actions">
+                <button @click="openBook(book.id)" class="read-book-btn">바로 읽기</button>
+              </div>
             </div>
           </div>
         </div>
@@ -75,6 +80,68 @@
               <p><strong>예문:</strong> {{ word.example }}</p>
               <p><strong>동의어:</strong> {{ word.synonym }}</p>
               <p><strong>반의어:</strong> {{ word.antonym }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'search'" class="search-content">
+        <div class="search-bar">
+          <input
+            type="text"
+            v-model="searchQuery"
+            placeholder="책 제목 또는 작가 이름으로 검색..."
+            class="search-input"
+            @keyup.enter="performSearch"
+          />
+          <button @click="performSearch" class="search-button">검색</button>
+        </div>
+
+        <div v-if="isSearching" class="loading">
+          <el-loading :fullscreen="false" />
+        </div>
+        <div v-else-if="searchError" class="error">
+          {{ searchError }}
+        </div>
+        <div v-else-if="hasSearched && searchResults.length === 0" class="empty-search-results">
+          <p>검색 결과가 없습니다. 다른 검색어를 시도해보세요.</p>
+        </div>
+        <div class="search-results-header" v-if="hasSearched">
+          <h2>
+            검색 결과 <span class="divider">|</span>
+            <span class="reset-link" @click="viewAllBooks">검색 초기화</span>
+          </h2>
+        </div>
+        <div class="search-results-title" v-else>
+          <h2>모든 도서</h2>
+        </div>
+        <div class="books-grid">
+          <div v-for="book in displayedBooks" :key="book.id" class="book-card">
+            <div class="book-cover">
+              <img v-if="book.coverImage" :src="book.coverImage" :alt="book.title" />
+              <div v-else class="placeholder-cover">
+                <p>{{ book.title }}</p>
+                <p class="author-placeholder">{{ book.author }}</p>
+              </div>
+            </div>
+            <div class="book-info">
+              <h3 class="book-title">{{ book.title }}</h3>
+              <p class="book-author">{{ book.author }}</p>
+              <div class="book-actions">
+                <button
+                  v-if="isBookInLibrary(book.id)"
+                  @click="openBook(book.id)"
+                  class="read-book-btn"
+                >
+                  바로 읽기
+                </button>
+                <template v-else>
+                  <button @click="addAndRead(book)" class="read-now-btn">바로 읽기</button>
+                  <button @click="addToLibrary(book)" class="add-to-library-btn">
+                    내 서재에 담기
+                  </button>
+                </template>
+              </div>
             </div>
           </div>
         </div>
@@ -126,10 +193,85 @@ export default {
       loading: false,
       error: null,
       userName: "User", // 기본값 설정
+      // Search functionality
+      searchQuery: "",
+      searchResults: [],
+      isSearching: false,
+      searchError: null,
+      hasSearched: false,
+      showAllBooks: true,
+      allBooks: [
+        {
+          id: "stolen-focus",
+          title: "Stolen Focus: Why You Can't Pay Attention",
+          author: "Johann Hari",
+          coverImage: "/covers/Cover_Johann Hari - Stolen focus (2022).png",
+          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
+          publisher: "Bloomsbury Publishing",
+        },
+        {
+          id: "harry-potter-1",
+          title: "Harry Potter and the Philosopher's Stone",
+          author: "J.K. Rowling",
+          coverImage: "/covers/Cover_Joanne Rowling - Harry Potter 1.png",
+          pdfUrl: "/pdfs/Joanne Rowling - Harry Potter 1.pdf",
+          publisher: "Bloomsbury Publishing",
+        },
+        {
+          id: "desertion",
+          title: "Desertion",
+          author: "Abdulrazak Gurnah",
+          coverImage: "/covers/Cover_Abdulrazak Gurnah - Desertion (2007).png",
+          pdfUrl: "/pdfs/Abdulrazak Gurnah - Desertion (2007).pdf",
+          publisher: "Bloomsbury Publishing",
+        },
+        {
+          id: "boy-comes",
+          title: "소년이 온다",
+          author: "한강",
+          coverImage: "/covers/Cover_한강 - 소년이 온다 (2016).png",
+          pdfUrl: "/pdfs/한강 - 소년이 온다 (2016).pdf",
+          publisher: "창비",
+        },
+        {
+          id: "pride-and-prejudice",
+          title: "Pride and Prejudice",
+          author: "Jane Austen",
+          coverImage: "/covers/Cover_Jane Austen - Pride and Prejudice.png",
+          pdfUrl: "/pdfs/Jane Austen - Pride and Prejudice.pdf",
+          publisher: "Penguin Classics",
+        },
+        {
+          id: "1984",
+          title: "1984",
+          author: "George Orwell",
+          coverImage: "/covers/Cover_George Orwell - 1984.png",
+          pdfUrl: "/pdfs/George Orwell - 1984.pdf",
+          publisher: "Penguin Books",
+        },
+        {
+          id: "to-kill-a-mockingbird",
+          title: "To Kill a Mockingbird",
+          author: "Harper Lee",
+          coverImage: "/covers/Cover_Harper Lee - To Kill a Mockingbird.png",
+          pdfUrl: "/pdfs/Harper Lee - To Kill a Mockingbird.pdf",
+          publisher: "J. B. Lippincott & Co.",
+        },
+        {
+          id: "the-great-gatsby",
+          title: "The Great Gatsby",
+          author: "F. Scott Fitzgerald",
+          coverImage: "/covers/Cover_F. Scott Fitzgerald - The Great Gatsby.png",
+          pdfUrl: "/pdfs/F. Scott Fitzgerald - The Great Gatsby.pdf",
+          publisher: "Charles Scribner's Sons",
+        },
+      ],
     };
   },
   computed: {
-    // userName getter 제거
+    displayedBooks() {
+      return this.hasSearched ? this.searchResults : this.allBooks;
+    },
   },
   watch: {
     activeTab: {
@@ -210,6 +352,63 @@ export default {
         localStorage.removeItem(`book_cover_${bookId}`);
         ElMessage.success("책이 내 서재에서 삭제되었습니다.");
       }
+    },
+    // Search functionality
+    performSearch() {
+      if (!this.searchQuery.trim()) {
+        this.searchError = "검색어를 입력해주세요.";
+        return;
+      }
+
+      this.isSearching = true;
+      this.searchError = null;
+      this.hasSearched = true;
+      this.showAllBooks = false;
+
+      try {
+        const query = this.searchQuery.toLowerCase();
+
+        // In a real app, this would be an API call
+        // Always search in both title and author (the "all" option)
+        setTimeout(() => {
+          this.searchResults = this.allBooks.filter(
+            (book) =>
+              book.title.toLowerCase().includes(query) || book.author.toLowerCase().includes(query)
+          );
+
+          this.isSearching = false;
+        }, 500);
+      } catch (error) {
+        console.error("검색 중 오류 발생:", error);
+        this.searchError = "검색 중 오류가 발생했습니다.";
+        this.isSearching = false;
+      }
+    },
+    isBookInLibrary(bookId) {
+      return this.books.some((book) => book.id === bookId);
+    },
+    addToLibrary(book) {
+      if (this.isBookInLibrary(book.id)) {
+        ElMessage.info("이미 내 서재에 있는 책입니다.");
+        return;
+      }
+
+      this.books.push({ ...book });
+      ElMessage.success("책이 내 서재에 추가되었습니다.");
+    },
+    addAndRead(book) {
+      if (!this.isBookInLibrary(book.id)) {
+        this.books.push({ ...book });
+        ElMessage.success("책이 내 서재에 추가되었습니다.");
+      }
+      this.openBook(book.id);
+    },
+    viewAllBooks() {
+      this.searchQuery = "";
+      this.hasSearched = false;
+      this.searchResults = [];
+      this.searchError = null;
+      this.showAllBooks = true;
     },
   },
 };
@@ -629,5 +828,192 @@ export default {
 .word-content strong {
   color: #606266;
   margin-right: 8px;
+}
+
+// Add new styles for search functionality
+.search-content {
+  margin-top: 20px;
+}
+
+.search-bar {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px 0 0 4px;
+  font-size: 16px;
+
+  &:focus {
+    outline: none;
+    border-color: #c8c8c8;
+  }
+}
+
+.search-button {
+  background-color: #fff2b2;
+  color: #333;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover {
+    background-color: #ffe980;
+  }
+}
+
+.search-filters {
+  display: none;
+}
+
+.filter-option {
+  display: none;
+}
+
+.empty-search-results,
+.search-instructions {
+  text-align: center;
+  padding: 40px 0;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+
+  p {
+    color: #666;
+    font-size: 16px;
+  }
+}
+
+.book-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.read-book-btn {
+  width: 100%;
+  height: 40px;
+  padding: 10px 0;
+  background-color: #fff2b2;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  margin-top: auto;
+
+  &:hover {
+    background-color: #ffe980;
+  }
+}
+
+.read-now-btn {
+  width: 100%;
+  height: 40px;
+  padding: 10px 0;
+  background-color: #fff2b2;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #ffe980;
+  }
+}
+
+.add-to-library-btn {
+  width: 100%;
+  height: 40px;
+  padding: 10px 0;
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #e8e8e8;
+  }
+}
+
+// Remove unused styles
+.add-library-btn,
+.read-directly-btn,
+.read-icon {
+  display: none;
+}
+
+.search-results-header {
+  margin: 20px 0 10px 0;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .divider {
+    margin: 0 10px;
+    color: #999;
+  }
+
+  .reset-link {
+    font-size: 16px;
+    color: #333;
+    cursor: pointer;
+    font-weight: normal;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.search-results-title {
+  margin: 20px 0 10px 0;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+  }
+}
+
+.search-instructions {
+  text-align: center;
+  padding: 40px 0;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin-top: 20px;
+
+  p {
+    color: #666;
+    font-size: 16px;
+  }
+}
+
+/* Remove the no-longer-needed search-actions styles */
+.search-actions {
+  display: none;
+}
+
+.view-all-button {
+  display: none;
 }
 </style>
