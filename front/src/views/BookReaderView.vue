@@ -66,16 +66,47 @@ export default {
   },
   methods: {
     fetchBookInfo() {
-      // In production, this would fetch from your API
-      // For now, we'll use hardcoded data
-      this.bookInfo = {
-        id: this.id,
-        title: "Stolen Focus",
-        author: "Johann Hari",
+      // Define book information mapping
+      const bookData = {
+        "stolen-focus": {
+          title: "Stolen Focus: Why You Can't Pay Attention",
+          author: "Johann Hari",
+          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
+        },
+        "harry-potter-1": {
+          title: "Harry Potter and the Philosopher's Stone",
+          author: "J.K. Rowling",
+          pdfUrl: "/pdfs/Joanne Rowling - Harry Potter 1.pdf",
+        },
+        desertion: {
+          title: "Desertion",
+          author: "Abdulrazak Gurnah",
+          pdfUrl: "/pdfs/Abdulrazak Gurnah - Desertion (2007).pdf",
+        },
+        "boy-comes": {
+          title: "소년이 온다",
+          author: "한강",
+          pdfUrl: "/pdfs/한강 - 소년이 온다 (2016).pdf",
+        },
       };
 
-      // Set PDF URL based on book ID
-      this.pdfUrl = `/pdfs/Johann Hari - Stolen focus (2022).pdf`;
+      // Get book data based on ID
+      const book = bookData[this.id];
+      if (!book) {
+        console.error("Book not found:", this.id);
+        this.goBack();
+        return;
+      }
+
+      // Set book information
+      this.bookInfo = {
+        id: this.id,
+        title: book.title,
+        author: book.author,
+      };
+
+      // Set PDF URL
+      this.pdfUrl = book.pdfUrl;
     },
 
     handleTextSelection(data) {

@@ -105,6 +105,27 @@ export default {
           coverImage: "/covers/Cover_Johann Hari - Stolen focus (2022).png",
           pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
         },
+        {
+          id: "harry-potter-1",
+          title: "Harry Potter and the Philosopher's Stone",
+          author: "J.K. Rowling",
+          coverImage: "/covers/Cover_Joanne Rowling - Harry Potter 1.png",
+          pdfUrl: "/pdfs/Joanne Rowling - Harry Potter 1.pdf",
+        },
+        {
+          id: "desertion",
+          title: "Desertion",
+          author: "Abdulrazak Gurnah",
+          coverImage: "/covers/Cover_Abdulrazak Gurnah - Desertion (2007).png",
+          pdfUrl: "/pdfs/Abdulrazak Gurnah - Desertion (2007).pdf",
+        },
+        {
+          id: "boy-comes",
+          title: "소년이 온다",
+          author: "한강",
+          coverImage: "/covers/Cover_한강 - 소년이 온다 (2016).png",
+          pdfUrl: "/pdfs/한강 - 소년이 온다 (2016).pdf",
+        },
       ],
       vocabulary: [],
     };
