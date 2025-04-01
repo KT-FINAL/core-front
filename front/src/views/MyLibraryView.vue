@@ -97,18 +97,6 @@
           <button @click="performSearch" class="search-button">검색</button>
         </div>
 
-        <div class="search-filters">
-          <label class="filter-option">
-            <input type="radio" v-model="searchFilter" value="all" name="searchFilter" /> 전체
-          </label>
-          <label class="filter-option">
-            <input type="radio" v-model="searchFilter" value="title" name="searchFilter" /> 제목
-          </label>
-          <label class="filter-option">
-            <input type="radio" v-model="searchFilter" value="author" name="searchFilter" /> 작가
-          </label>
-        </div>
-
         <div v-if="isSearching" class="loading">
           <el-loading :fullscreen="false" />
         </div>
@@ -118,8 +106,11 @@
         <div v-else-if="hasSearched && searchResults.length === 0" class="empty-search-results">
           <p>검색 결과가 없습니다. 다른 검색어를 시도해보세요.</p>
         </div>
-        <div class="search-results-title" v-if="hasSearched">
-          <h2>검색 결과</h2>
+        <div class="search-results-header" v-if="hasSearched">
+          <h2>
+            검색 결과 <span class="divider">|</span>
+            <span class="reset-link" @click="viewAllBooks">검색 초기화</span>
+          </h2>
         </div>
         <div class="search-results-title" v-else>
           <h2>모든 도서</h2>
@@ -204,11 +195,11 @@ export default {
       userName: "User", // 기본값 설정
       // Search functionality
       searchQuery: "",
-      searchFilter: "all",
       searchResults: [],
       isSearching: false,
       searchError: null,
       hasSearched: false,
+      showAllBooks: true,
       allBooks: [
         {
           id: "stolen-focus",
@@ -372,28 +363,18 @@ export default {
       this.isSearching = true;
       this.searchError = null;
       this.hasSearched = true;
+      this.showAllBooks = false;
 
       try {
         const query = this.searchQuery.toLowerCase();
 
         // In a real app, this would be an API call
-        // Simulating with setTimeout to mimic network request
+        // Always search in both title and author (the "all" option)
         setTimeout(() => {
-          if (this.searchFilter === "all") {
-            this.searchResults = this.allBooks.filter(
-              (book) =>
-                book.title.toLowerCase().includes(query) ||
-                book.author.toLowerCase().includes(query)
-            );
-          } else if (this.searchFilter === "title") {
-            this.searchResults = this.allBooks.filter((book) =>
-              book.title.toLowerCase().includes(query)
-            );
-          } else if (this.searchFilter === "author") {
-            this.searchResults = this.allBooks.filter((book) =>
-              book.author.toLowerCase().includes(query)
-            );
-          }
+          this.searchResults = this.allBooks.filter(
+            (book) =>
+              book.title.toLowerCase().includes(query) || book.author.toLowerCase().includes(query)
+          );
 
           this.isSearching = false;
         }, 500);
@@ -421,6 +402,13 @@ export default {
         ElMessage.success("책이 내 서재에 추가되었습니다.");
       }
       this.openBook(book.id);
+    },
+    viewAllBooks() {
+      this.searchQuery = "";
+      this.hasSearched = false;
+      this.searchResults = [];
+      this.searchError = null;
+      this.showAllBooks = true;
     },
   },
 };
@@ -881,22 +869,11 @@ export default {
 }
 
 .search-filters {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
+  display: none;
 }
 
 .filter-option {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #666;
-
-  input[type="radio"] {
-    cursor: pointer;
-  }
+  display: none;
 }
 
 .empty-search-results,
@@ -978,6 +955,35 @@ export default {
   display: none;
 }
 
+.search-results-header {
+  margin: 20px 0 10px 0;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .divider {
+    margin: 0 10px;
+    color: #999;
+  }
+
+  .reset-link {
+    font-size: 16px;
+    color: #333;
+    cursor: pointer;
+    font-weight: normal;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 .search-results-title {
   margin: 20px 0 10px 0;
 
@@ -987,5 +993,27 @@ export default {
     color: #333;
     margin: 0;
   }
+}
+
+.search-instructions {
+  text-align: center;
+  padding: 40px 0;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin-top: 20px;
+
+  p {
+    color: #666;
+    font-size: 16px;
+  }
+}
+
+/* Remove the no-longer-needed search-actions styles */
+.search-actions {
+  display: none;
+}
+
+.view-all-button {
+  display: none;
 }
 </style>
