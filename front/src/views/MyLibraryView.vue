@@ -58,17 +58,50 @@
         </div>
       </div>
 
-      <div v-if="activeTab === 'vocabulary'" class="vocabulary-content">
+      <div v-if="activeTab === 'vocabulary'" class="vocabulary-section">
+        <div class="vocabulary-header">
+          <h2>내 단어장</h2>
+          <button
+            @click="generateStory"
+            class="generate-story-button"
+            :disabled="isGeneratingStory || vocabulary.length < 5"
+          >
+            <span v-if="isGeneratingStory">이야기 생성 중...</span>
+            <span v-else>AI 이야기 만들기</span>
+          </button>
+        </div>
+
+        <div v-if="story" class="story-section">
+          <h3>AI가 만든 이야기</h3>
+          <div class="story-content">
+            <div class="story-english">
+              <h4>영어</h4>
+              <p>{{ story.story }}</p>
+            </div>
+            <div class="story-korean">
+              <h4>한국어</h4>
+              <p>{{ story.translation }}</p>
+            </div>
+            <div class="used-words">
+              <h4>사용된 단어</h4>
+              <div class="word-tags">
+                <span v-for="word in story.used_words" :key="word" class="word-tag">
+                  {{ word }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div v-if="loading" class="loading">
-          <el-loading :fullscreen="false" />
+          <div class="spinner"></div>
+          <p>단어장을 불러오는 중...</p>
         </div>
+
         <div v-else-if="error" class="error">
-          {{ error }}
+          <p>{{ error }}</p>
         </div>
-        <div v-else-if="vocabulary.length === 0" class="empty-vocabulary">
-          <p>아직 저장된 단어가 없습니다.</p>
-          <button class="browse-books-btn">책을 읽고 단어 추가하기</button>
-        </div>
+
         <div v-else class="vocabulary-list">
           <div v-for="word in vocabulary" :key="word.id" class="vocabulary-item">
             <div class="word-header">
@@ -266,6 +299,9 @@ export default {
           publisher: "Charles Scribner's Sons",
         },
       ],
+      isGeneratingStory: false,
+      story: null,
+      storyError: null,
     };
   },
   computed: {
@@ -409,6 +445,33 @@ export default {
       this.searchResults = [];
       this.searchError = null;
       this.showAllBooks = true;
+    },
+    async generateStory() {
+      if (this.vocabulary.length < 5) {
+        ElMessage.warning("단어장에 최소 5개의 단어가 필요합니다.");
+        return;
+      }
+
+      this.isGeneratingStory = true;
+      this.storyError = null;
+
+      try {
+        // 무작위로 5개의 단어 선택
+        const randomWords = this.vocabulary
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 5)
+          .map((word) => word.word);
+
+        // AI 이야기 생성
+        const response = await vocabularyService.createStory(randomWords);
+        this.story = response;
+      } catch (error) {
+        console.error("이야기 생성 에러:", error);
+        this.storyError = "이야기 생성에 실패했습니다.";
+        ElMessage.error("이야기 생성에 실패했습니다.");
+      } finally {
+        this.isGeneratingStory = false;
+      }
     },
   },
 };
@@ -709,8 +772,104 @@ export default {
   }
 }
 
-.vocabulary-content {
+.vocabulary-section {
   margin-top: 20px;
+}
+
+.vocabulary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+  .generate-story-button {
+    background-color: #fff2b2;
+    color: #333;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+
+    &:hover:not(:disabled) {
+      background-color: #ffeb99;
+    }
+
+    &:disabled {
+      background-color: #f5f5f5;
+      color: #999;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.story-section {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  h3 {
+    margin: 0 0 16px;
+    color: #333;
+    font-size: 18px;
+  }
+
+  .story-content {
+    .story-english,
+    .story-korean {
+      margin-bottom: 16px;
+
+      h4 {
+        margin: 0 0 8px;
+        color: #666;
+        font-size: 14px;
+      }
+
+      p {
+        margin: 0;
+        line-height: 1.6;
+        font-size: 16px;
+      }
+    }
+
+    .used-words {
+      h4 {
+        margin: 0 0 8px;
+        color: #666;
+        font-size: 14px;
+      }
+
+      .word-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .word-tag {
+          background-color: #fff2b2;
+          color: #333;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 14px;
+        }
+      }
+    }
+  }
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.error {
+  color: #f56c6c;
+  text-align: center;
+  padding: 20px;
 }
 
 .vocabulary-list {
@@ -803,34 +962,6 @@ export default {
   font-style: italic;
 }
 
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-}
-
-.error {
-  color: #f56c6c;
-  text-align: center;
-  padding: 20px;
-}
-
-.word-content {
-  padding: 15px;
-  line-height: 1.6;
-}
-
-.word-content p {
-  margin: 8px 0;
-}
-
-.word-content strong {
-  color: #606266;
-  margin-right: 8px;
-}
-
-// Add new styles for search functionality
 .search-content {
   margin-top: 20px;
 }
@@ -948,13 +1079,6 @@ export default {
   }
 }
 
-// Remove unused styles
-.add-library-btn,
-.read-directly-btn,
-.read-icon {
-  display: none;
-}
-
 .search-results-header {
   margin: 20px 0 10px 0;
 
@@ -1008,7 +1132,6 @@ export default {
   }
 }
 
-/* Remove the no-longer-needed search-actions styles */
 .search-actions {
   display: none;
 }
