@@ -77,6 +77,42 @@ export const vocabularyService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // 단어장에서 무작위로 단어 가져오기
+  async getRandomWords(count = 5) {
+    try {
+      const response = await api.get("/api/v1/vocabulary");
+      const words = response.data;
+      // 무작위로 count개만큼 단어 선택
+      const shuffled = words.sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, count).map((word) => word.word);
+    } catch (error) {
+      console.error("단어 가져오기 에러:", error);
+      throw error;
+    }
+  },
+
+  // AI 이야기 생성
+  async createStory(words) {
+    try {
+      const response = await fetch("http://localhost:8000/ai/create-story", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ words }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API 요청 실패: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("AI 이야기 생성 에러:", error);
+      throw error;
+    }
+  },
 };
 
 export default api;
