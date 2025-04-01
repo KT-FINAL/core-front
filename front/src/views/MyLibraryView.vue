@@ -7,6 +7,7 @@
       </div>
       <div class="user-menu">
         <span class="username">{{ userName }}님</span>
+        <button @click="goToSubscription" class="subscribe-button">구독하기</button>
         <button @click="handleLogout" class="logout-button">로그아웃</button>
       </div>
     </div>
@@ -293,6 +294,9 @@ export default {
       localStorage.removeItem("token"); // 토큰도 삭제
       this.$router.push("/");
     },
+    goToSubscription() {
+      this.$router.push("/subscription");
+    },
     async fetchUserInfo() {
       try {
         const userInfo = await userService.getUserInfo();
@@ -462,6 +466,22 @@ export default {
   font-size: 16px;
   font-weight: 500;
   color: #333;
+}
+
+.subscribe-button {
+  background-color: #117df8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: -10px;
+
+  &:hover {
+    background-color: #0c5aba;
+  }
 }
 
 .logout-button {

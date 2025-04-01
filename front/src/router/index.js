@@ -4,6 +4,7 @@ import SignupView from "../views/SignupView.vue";
 import MyLibraryView from "../views/MyLibraryView.vue";
 import BookReaderView from "../views/BookReaderView.vue";
 import VocabularyView from "../views/VocabularyView.vue";
+import SubscriptionView from "../views/SubscriptionView.vue";
 
 const routes = [
   {
@@ -48,6 +49,15 @@ const routes = [
     meta: {
       requiresAuth: true,
       title: "단어장 | 밀리의 서재",
+    },
+  },
+  {
+    path: "/subscription",
+    name: "subscription",
+    component: SubscriptionView,
+    meta: {
+      requiresAuth: false,
+      title: "프리미엄 구독 | 밀리의 서재",
     },
   },
 ];
