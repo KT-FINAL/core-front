@@ -715,7 +715,7 @@ export default {
       this.isGeneratingImage = true;
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://20.249.185.13/ai/create-comic", {
+        const response = await fetch(`${BASE_URL}/ai/create-comic`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -755,7 +755,7 @@ export default {
         this.loading = true;
         this.error = null;
         const token = localStorage.getItem("token");
-        const response = await fetch("http://20.249.185.13/api/v1/vocabulary/ai-stories", {
+        const response = await fetch(`${BASE_URL}/api/v1/vocabulary/ai-stories`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -795,7 +795,7 @@ export default {
 
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://20.249.185.13/api/v1/vocabulary/ai-stories", {
+        const response = await fetch(`${BASE_URL}/api/v1/vocabulary/ai-stories`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -846,15 +846,12 @@ export default {
         });
 
         const token = localStorage.getItem("token");
-        const response = await fetch(
-          `http://20.249.185.13/api/v1/vocabulary/ai-stories/${storyId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await fetch(`${BASE_URL}/api/v1/vocabulary/ai-stories/${storyId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         if (!response.ok) {
           throw new Error("AI 이야기 삭제에 실패했습니다.");

@@ -34,6 +34,7 @@
 <script>
 import PDFViewer from "@/components/PDFViewer.vue";
 import TextSelectionPanel from "@/components/TextSelectionPanel.vue";
+import { BASE_URL } from "@/services/api";
 
 export default {
   name: "BookReaderView",
@@ -76,7 +77,7 @@ export default {
         const token = localStorage.getItem("token");
 
         // Fetch book data from API
-        const response = await fetch(`http://20.249.185.13/api/books/all`, {
+        const response = await fetch(`${BASE_URL}/api/books/all`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
