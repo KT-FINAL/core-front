@@ -337,7 +337,7 @@ export default {
       try {
         const token = localStorage.getItem("token");
 
-        const response = await fetch("http://20.249.185.13/api/book", {
+        const response = await fetch("http://20.249.185.13/api/books/user", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -391,7 +391,7 @@ export default {
       try {
         const token = localStorage.getItem("token");
 
-        const response = await fetch("http://20.249.185.13/api/book", {
+        const response = await fetch("http://20.249.185.13/api/books/register", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -488,7 +488,7 @@ export default {
         }
 
         // Use the book's ID for API call
-        const response = await fetch(`http://20.249.185.13/api/book/${bookId}`, {
+        const response = await fetch(`http://20.249.185.13/api/books/${bookId}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
