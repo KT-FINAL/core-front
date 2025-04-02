@@ -601,8 +601,11 @@ export default {
           throw new Error(`책을 찾을 수 없습니다: ${bookId}`);
         }
 
+        // Use the myBookId from the book object, which is the ID we need for deletion
+        const id = bookToRemove.myBookId;
+
         // Use the exact API endpoint as specified in the documentation
-        const response = await fetch(`${BASE_URL}/api/books/${bookId}`, {
+        const response = await fetch(`${BASE_URL}/api/books/${id}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
