@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const BASE_URL = "http://20.249.185.13";
+
 const api = axios.create({
-  baseURL: "http://20.249.185.13",
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -10,7 +12,7 @@ const api = axios.create({
 // 토큰이 있는 경우 헤더에 추가
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) {
+  if (token && !config.url.includes("/api/v1/user/login")) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -95,10 +97,11 @@ export const vocabularyService = {
   // AI 이야기 생성
   async createStory(words) {
     try {
-      const response = await fetch("http://localhost:8000/ai/create-story", {
+      const response = await fetch(`${BASE_URL}/ai/create-story`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({ words }),
       });
@@ -110,6 +113,44 @@ export const vocabularyService = {
       return await response.json();
     } catch (error) {
       console.error("AI 이야기 생성 에러:", error);
+      throw error;
+    }
+  },
+};
+
+export const wordAnalysisService = {
+  async analyzeWord(word, bookTitle, publisher, paragraph) {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      console.log("API 요청 헤더:", headers);
+      console.log("API 요청 URL:", `${BASE_URL}/ai/analyze-word`);
+      const response = await fetch(`${BASE_URL}/ai/analyze-word`, {
+        method: "POST",
+        mode: "cors",
+        credentials: "omit",
+        headers: headers,
+        body: JSON.stringify({
+          book_title: bookTitle || "해리포터와 마법사의 돌",
+          publisher: publisher || "문학수첩",
+          paragraph: paragraph || "",
+          word: word.trim(),
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`API 요청 실패: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("단어 분석 중 오류 발생:", error);
       throw error;
     }
   },
