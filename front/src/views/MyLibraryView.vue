@@ -7,7 +7,9 @@
       </div>
       <div class="user-menu">
         <span class="username">{{ userName }}님</span>
-        <button @click="goToSubscription" class="subscribe-button">구독하기</button>
+        <button v-if="!isPremium" @click="goToSubscription" class="subscribe-button">
+          구독하기
+        </button>
         <button @click="handleLogout" class="logout-button">로그아웃</button>
       </div>
     </div>
@@ -193,6 +195,7 @@ export default {
   data() {
     return {
       activeTab: "library",
+      isPremium: false,
       books: [
         {
           id: "stolen-focus",
@@ -337,6 +340,7 @@ export default {
       try {
         const userInfo = await userService.getUserInfo();
         this.userName = userInfo.name;
+        this.isPremium = userInfo.isPremium;
       } catch (error) {
         console.error("사용자 정보 로딩 에러:", error);
         ElMessage.error("사용자 정보를 불러오는데 실패했습니다.");

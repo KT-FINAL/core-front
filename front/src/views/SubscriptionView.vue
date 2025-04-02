@@ -66,6 +66,7 @@ export default {
   },
   async mounted() {
     await this.fetchUserInfo();
+    this.checkSubscriptionStatus();
   },
   methods: {
     async fetchUserInfo() {
@@ -79,6 +80,17 @@ export default {
         if (localUserInfo && localUserInfo.name) {
           this.userName = localUserInfo.name;
         }
+      }
+    },
+    async checkSubscriptionStatus() {
+      try {
+        const userInfo = await userService.getUserInfo();
+        if (userInfo.isPremium) {
+          // 구독 중인 사용자는 라이브러리로 리디렉션
+          this.$router.push("/library");
+        }
+      } catch (error) {
+        console.error("구독 상태 확인 에러:", error);
       }
     },
     goToLibrary() {
@@ -191,6 +203,8 @@ export default {
   padding: 30px;
   text-align: center;
   transition: transform 0.2s;
+  max-width: 500px;
+  margin: 0;
 
   &:hover {
     transform: translateY(-5px);
