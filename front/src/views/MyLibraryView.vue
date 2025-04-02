@@ -7,7 +7,7 @@
       </div>
       <div class="user-menu">
         <span class="username">{{ userName }}님</span>
-        <span class="premium-badge">Premium 구독중</span>
+        <span class="premium-badge">Basic 구독중</span>
         <button @click="handleLogout" class="logout-button">로그아웃</button>
       </div>
     </div>

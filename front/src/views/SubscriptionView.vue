@@ -12,7 +12,7 @@
     </div>
 
     <div class="content">
-      <h1 class="title">Premium 구독</h1>
+      <h1 class="title">Basic 구독</h1>
       <p class="subtitle">AI 기반 단어 학습으로 더 효과적인 독서 경험을 만나보세요</p>
 
       <div class="feature-grid">

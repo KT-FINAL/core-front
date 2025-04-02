@@ -11,7 +11,7 @@
     </div>
 
     <div class="content">
-      <h1 class="title">Premium 구독 결제</h1>
+      <h1 class="title">Basic 구독 결제</h1>
       <div class="payment-provider">
         <p class="subtitle">안전한 결제를 위해</p>
         <img :src="require('@/assets/Toss_Logo_Primary.png')" alt="Toss Logo" class="toss-logo" />
