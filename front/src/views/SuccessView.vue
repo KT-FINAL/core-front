@@ -14,7 +14,7 @@
 </template>
 
 <script>
-import { paymentService } from "@/services/api";
+import { paymentService, userService } from "@/services/api";
 
 export default {
   name: "SuccessView",
@@ -59,9 +59,21 @@ export default {
         const response = await paymentService.saveBilling(billingData);
         console.log("구독 결제 성공:", response);
 
-        // Update user's premium status in localStorage
-        user.isPremium = true;
-        localStorage.setItem("user", JSON.stringify(user));
+        // Get updated user info after successful payment
+        try {
+          await userService.getUserInfo();
+
+          // Always set isPremium to true after successful payment regardless of API response
+          user.isPremium = true;
+          localStorage.setItem("user", JSON.stringify(user));
+
+          console.log("프리미엄 상태 업데이트 완료");
+        } catch (error) {
+          console.error("사용자 정보 업데이트 오류:", error);
+          // Fallback to updating just the premium status
+          user.isPremium = true;
+          localStorage.setItem("user", JSON.stringify(user));
+        }
 
         this.paymentSuccessful = true;
         this.isProcessing = false;
@@ -71,6 +83,12 @@ export default {
       }
     },
     goToLibrary() {
+      // Always make sure the premium flag is set
+      const user = JSON.parse(localStorage.getItem("user"));
+      user.isPremium = true;
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Navigate to library
       this.$router.push("/library");
     },
   },

@@ -143,13 +143,17 @@ export default {
           password: this.password,
         });
 
-        // Store user data in Vuex store
-        this.$store.commit("setUser", {
+        // Store user data in localStorage
+        const userData = {
+          id: loginResponse.id,
           email: this.email,
           name: this.name,
           isLoggedIn: true,
-          ...loginResponse,
-        });
+          isPremium: false, // New users are not premium by default
+        };
+
+        // Save to localStorage
+        localStorage.setItem("user", JSON.stringify(userData));
 
         // Redirect to subscription page after successful signup
         this.$router.push("/subscription");
