@@ -23,7 +23,8 @@ const routes = [
     name: "library",
     component: MyLibraryView,
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
+      requiresPremium: true,
       title: "서재 | 밀리의 서재",
     },
   },
@@ -40,7 +41,8 @@ const routes = [
     name: "BookReader",
     component: BookReaderView,
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
+      requiresPremium: true,
       title: "책 읽기 | 밀리의 서재",
     },
     props: true,
@@ -51,6 +53,7 @@ const routes = [
     component: VocabularyView,
     meta: {
       requiresAuth: true,
+      requiresPremium: true,
       title: "단어장 | 밀리의 서재",
     },
   },
@@ -73,7 +76,7 @@ const routes = [
     name: "success",
     component: SuccessView,
     meta: {
-      requiresAuth: true,
+      requiresAuth: false,
       title: "결제 완료 | 밀리의 서재",
     },
   },
@@ -82,7 +85,7 @@ const routes = [
     name: "fail",
     component: FailView,
     meta: {
-      requiresAuth: true,
+      requiresAuth: false,
       title: "결제 실패 | 밀리의 서재",
     },
   },
@@ -98,17 +101,30 @@ router.beforeEach((to, from, next) => {
   // Set document title
   document.title = to.meta.title || "밀리의 서재";
 
-  // Check authentication
-  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
-  const isLoggedIn = localStorage.getItem("user")
-    ? JSON.parse(localStorage.getItem("user")).isLoggedIn
-    : false;
+  // Get user info from localStorage
+  const user = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null;
 
+  const isLoggedIn = user ? user.isLoggedIn : false;
+  const isPremium = user ? user.isPremium : false;
+
+  // Check authentication requirement
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const requiresPremium = to.matched.some((record) => record.meta.requiresPremium);
+
+  // If route requires authentication and user is not logged in, redirect to login
   if (requiresAuth && !isLoggedIn) {
     next("/");
-  } else {
-    next();
+    return;
   }
+
+  // If route requires premium and user is not premium, redirect to subscription page
+  if (requiresPremium && !isPremium) {
+    next("/subscription");
+    return;
+  }
+
+  // Otherwise, proceed to the requested route
+  next();
 });
 
 export default router;

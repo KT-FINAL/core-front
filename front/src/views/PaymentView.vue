@@ -1,13 +1,12 @@
 <template>
   <div class="payment-container">
     <div class="header">
-      <div class="elogo-container" @click="goToLibrary">
+      <div class="elogo-container">
         <img :src="require('@/assets/Millie_Logo_Eng.png')" alt="Millie Logo Eng" class="elogo" />
         <span class="plus-sign">+</span>
       </div>
       <div class="user-menu">
         <span class="username">{{ userName }}님</span>
-        <button @click="goToLibrary" class="back-button">내 서재로 돌아가기</button>
       </div>
     </div>
 
@@ -50,6 +49,7 @@ export default {
   async mounted() {
     await this.fetchUserInfo();
     this.initializeTossPayments();
+    this.checkPremiumStatus();
   },
   methods: {
     async fetchUserInfo() {
@@ -64,8 +64,17 @@ export default {
         }
       }
     },
-    goToLibrary() {
-      this.$router.push("/library");
+    // Check if user is already premium, if so redirect to library
+    async checkPremiumStatus() {
+      try {
+        const userInfo = await userService.getUserInfo();
+        if (userInfo.isPremium) {
+          // If user is already premium, redirect to library
+          this.$router.push("/library");
+        }
+      } catch (error) {
+        console.error("프리미엄 상태 확인 중 오류 발생:", error);
+      }
     },
     initializeTossPayments() {
       // TOSS SDK 초기화

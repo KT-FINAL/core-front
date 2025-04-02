@@ -7,9 +7,8 @@
       </div>
       <div class="user-menu">
         <span class="username">{{ userName }}님</span>
-        <button v-if="!isPremium" @click="goToSubscription" class="subscribe-button">
-          구독하기
-        </button>
+        <span v-if="isPremium" class="premium-badge">Premium 구독 중입니다</span>
+        <button v-else @click="goToSubscription" class="subscribe-button">구독하기</button>
         <button @click="handleLogout" class="logout-button">로그아웃</button>
       </div>
     </div>
@@ -640,6 +639,15 @@ export default {
   font-size: 16px;
   font-weight: 500;
   color: #333;
+}
+
+.premium-badge {
+  background-color: #45a049;
+  color: white;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .subscribe-button {

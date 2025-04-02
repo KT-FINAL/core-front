@@ -1,13 +1,12 @@
 <template>
   <div class="subscription-container">
     <div class="header">
-      <div class="elogo-container" @click="goToLibrary">
+      <div class="elogo-container">
         <img :src="require('@/assets/Millie_Logo_Eng.png')" alt="Millie Logo Eng" class="elogo" />
         <span class="plus-sign">+</span>
       </div>
       <div class="user-menu">
         <span class="username">{{ userName }}님</span>
-        <button @click="goToLibrary" class="back-button">내 서재로 돌아가기</button>
       </div>
     </div>
 
@@ -66,13 +65,20 @@ export default {
   },
   async mounted() {
     await this.fetchUserInfo();
-    this.checkSubscriptionStatus();
+    await this.checkSubscriptionStatus();
   },
   methods: {
     async fetchUserInfo() {
       try {
         const userInfo = await userService.getUserInfo();
         this.userName = userInfo.name;
+
+        // Also check the premium status from API and update localStorage if needed
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        if (storedUser && userInfo.isPremium !== undefined) {
+          storedUser.isPremium = userInfo.isPremium;
+          localStorage.setItem("user", JSON.stringify(storedUser));
+        }
       } catch (error) {
         console.error("사용자 정보 로딩 에러:", error);
         // 오류 발생 시 localStorage에서 시도
@@ -92,9 +98,6 @@ export default {
       } catch (error) {
         console.error("구독 상태 확인 에러:", error);
       }
-    },
-    goToLibrary() {
-      this.$router.push("/library");
     },
     goToPayment() {
       this.$router.push("/payment");
@@ -153,21 +156,6 @@ export default {
   font-size: 16px;
   font-weight: 500;
   color: #333;
-}
-
-.back-button {
-  background-color: #f5f5f5;
-  color: #666;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background-color: #e8e8e8;
-  }
 }
 
 .content {

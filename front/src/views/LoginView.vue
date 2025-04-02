@@ -79,15 +79,24 @@ export default {
           password: this.password,
         });
 
-        // Store user data in Vuex store
-        this.$store.commit("setUser", {
+        // Store user data in localStorage
+        const userData = {
+          id: response.id,
           email: this.email,
+          name: response.name,
           isLoggedIn: true,
-          ...response,
-        });
+          isPremium: response.isPremium || false, // Ensure isPremium is saved
+        };
 
-        // Redirect to library
-        this.$router.push("/library");
+        // Save to localStorage
+        localStorage.setItem("user", JSON.stringify(userData));
+
+        // Redirect to library or subscription page based on premium status
+        if (userData.isPremium) {
+          this.$router.push("/library");
+        } else {
+          this.$router.push("/subscription");
+        }
       } catch (error) {
         // Check if the error is specifically about invalid credentials
         if (error.response?.status === 401) {
