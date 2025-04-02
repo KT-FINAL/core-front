@@ -24,13 +24,26 @@
         >
           내 단어장
         </h1>
+        <h1
+          @click="activeTab = 'aistories'"
+          :class="['tab', { active: activeTab === 'aistories' }]"
+        >
+          내 AI 이야기
+        </h1>
         <h1 @click="activeTab = 'search'" :class="['tab', { active: activeTab === 'search' }]">
           검색
         </h1>
       </div>
       <p class="welcome-message" v-if="activeTab !== 'search'">
-        {{ userName }}님이 저장한 {{ activeTab === "library" ? "책이 " : "단어가 " }} 여기에
-        표시됩니다.
+        {{ userName }}님이 저장한
+        {{
+          activeTab === "library"
+            ? "책이 "
+            : activeTab === "vocabulary"
+            ? "단어가 "
+            : "AI 이야기가 "
+        }}
+        여기에 표시됩니다.
       </p>
 
       <div v-if="activeTab === 'library'" class="library-content">
@@ -81,9 +94,23 @@
         <div v-if="story" class="story-section">
           <div class="story-header">
             <h3>AI가 만든 이야기</h3>
-            <button @click="toggleHighlight" class="highlight-button">
-              {{ isHighlighted ? "하이라이트 끄기" : "사용된 단어 보기" }}
-            </button>
+            <div class="story-actions">
+              <div class="save-button-container">
+                <button
+                  @click="saveStory"
+                  class="save-story-button"
+                  :disabled="!generatedImage && !story.aiImage"
+                >
+                  저장하기
+                </button>
+                <div v-if="!generatedImage && !story.aiImage" class="tooltip">
+                  이미지 생성한 후 요청해주세요.
+                </div>
+              </div>
+              <button @click="toggleHighlight" class="highlight-button">
+                {{ isHighlighted ? "하이라이트 끄기" : "사용된 단어 보기" }}
+              </button>
+            </div>
           </div>
           <div class="story-content">
             <div class="story-tabs">
@@ -99,10 +126,26 @@
               >
                 한국어
               </button>
+              <button
+                :class="['story-tab', { active: storyTab === 'image' }]"
+                @click="storyTab = 'image'"
+              >
+                이미지
+              </button>
             </div>
             <div class="story-text">
               <p v-if="storyTab === 'english'" v-html="highlightedStory"></p>
-              <p v-else>{{ story.translation }}</p>
+              <p v-else-if="storyTab === 'korean'">{{ story.translation }}</p>
+              <div v-else-if="storyTab === 'image'" class="story-image">
+                <div v-if="isGeneratingImage" class="image-loading">
+                  <div class="spinner"></div>
+                  <p>이미지 생성 중...</p>
+                </div>
+                <img v-else-if="generatedImage" :src="generatedImage" alt="Generated Story Image" />
+                <button v-else @click="generateImage" class="generate-image-btn">
+                  AI 이야기로 이미지를 생성해보세요!
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -124,12 +167,12 @@
             @click="toggleWordCard(word.id)"
           >
             <div class="card-inner" :class="{ 'is-flipped': flippedCards[word.id] }">
+              <button @click.stop="handleDelete(word.id)" class="delete-vocabulary-btn">
+                &times;
+              </button>
               <div class="card-front">
                 <div class="word-header">
                   <h3 class="vocabulary-word">{{ word.word }}</h3>
-                  <el-button type="danger" size="small" @click.stop="handleDelete(word.id)"
-                    >삭제</el-button
-                  >
                 </div>
               </div>
               <div class="card-back">
@@ -141,6 +184,70 @@
                   <p class="example-sentence"><strong>예문:</strong> {{ word.example }}</p>
                   <p><strong>동의어:</strong> {{ word.synonym || "없음" }}</p>
                   <p><strong>반의어:</strong> {{ word.antonym || "없음" }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'aistories'" class="aistories-section">
+        <div class="aistories-header">
+          <h2>내 AI 이야기</h2>
+        </div>
+        <div v-if="loading" class="loading">
+          <div class="spinner"></div>
+          <p>AI 이야기를 불러오는 중...</p>
+        </div>
+        <div v-else-if="error" class="error">
+          <p>{{ error }}</p>
+        </div>
+        <div v-else-if="aiStories.length === 0" class="empty-aistories">
+          <p>아직 생성된 AI 이야기가 없습니다.</p>
+        </div>
+        <div v-else class="aistories-grid">
+          <div v-for="story in aiStories" :key="story.id" class="aistory-card">
+            <button @click="deleteAIStory(story.id)" class="delete-aistory-btn">&times;</button>
+            <div class="aistory-content">
+              <div class="aistory-tabs">
+                <button
+                  :class="['aistory-tab', { active: story.activeTab === 'english' }]"
+                  @click="story.activeTab = 'english'"
+                >
+                  영어
+                </button>
+                <button
+                  :class="['aistory-tab', { active: story.activeTab === 'korean' }]"
+                  @click="story.activeTab = 'korean'"
+                >
+                  한국어
+                </button>
+                <button
+                  :class="['aistory-tab', { active: story.activeTab === 'image' }]"
+                  @click="story.activeTab = 'image'"
+                >
+                  이미지
+                </button>
+              </div>
+              <div class="aistory-text">
+                <p v-if="story.activeTab === 'english'" v-html="getHighlightedStory(story)"></p>
+                <p v-else-if="story.activeTab === 'korean'">{{ story.koreanStory }}</p>
+                <div v-else-if="story.activeTab === 'image'" class="aistory-image">
+                  <img v-if="story.aiImage" :src="story.aiImage" alt="AI Generated Story Image" />
+                  <p v-else class="no-image">이미지가 없습니다.</p>
+                </div>
+              </div>
+              <div class="aistory-meta">
+                <div class="aistory-actions">
+                  <button @click="toggleStoryHighlight(story.id)" class="highlight-button">
+                    {{ story.isHighlighted ? "하이라이트 끄기" : "사용된 단어 보기" }}
+                  </button>
+                </div>
+                <p>생성일: {{ formatDate(story.createdAt) }}</p>
+                <div class="used-words">
+                  <span v-for="word in JSON.parse(story.wordList)" :key="word" class="word-tag">
+                    {{ word }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -245,6 +352,9 @@ export default {
       story: null,
       storyError: null,
       isHighlighted: false,
+      isGeneratingImage: false,
+      generatedImage: null,
+      aiStories: [],
     };
   },
   computed: {
@@ -268,6 +378,8 @@ export default {
       handler(newTab) {
         if (newTab === "vocabulary") {
           this.fetchVocabulary();
+        } else if (newTab === "aistories") {
+          this.fetchAIStories();
         }
       },
     },
@@ -276,6 +388,9 @@ export default {
     await this.fetchUserInfo();
     await this.fetchAllBooks();
     this.checkForExtractedCovers();
+    if (this.activeTab === "aistories") {
+      await this.fetchAIStories();
+    }
   },
   methods: {
     handleLogout() {
@@ -558,15 +673,18 @@ export default {
       this.isGeneratingStory = true;
       this.storyError = null;
 
+      // 이전 이야기 정보 초기화
+      this.story = null;
+      this.generatedImage = null;
+      this.storyTab = "english";
+      this.isHighlighted = false;
+
       try {
-        // Select 5 random words
-        const randomWords = this.vocabulary
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 5)
-          .map((word) => word.word);
+        // Select first 5 words without shuffling
+        const selectedWords = this.vocabulary.slice(0, 5).map((word) => word.word);
 
         // Generate AI story
-        const response = await vocabularyService.createStory(randomWords);
+        const response = await vocabularyService.createStory(selectedWords);
         this.story = response;
       } catch (error) {
         console.error("이야기 생성 에러:", error);
@@ -588,6 +706,169 @@ export default {
     },
     toggleHighlight() {
       this.isHighlighted = !this.isHighlighted;
+    },
+    async generateImage() {
+      if (!this.story) {
+        ElMessage.warning("먼저 AI 이야기를 생성해주세요.");
+        return;
+      }
+
+      this.isGeneratingImage = true;
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://20.249.185.13/ai/create-comic", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            story: this.story.story,
+          }),
+        });
+
+        const data = await response.json();
+        console.log("API Response:", data); // 디버깅을 위한 로그 추가
+
+        if (!response.ok) {
+          throw new Error(data.message || "이미지 생성에 실패했습니다.");
+        }
+
+        // API 응답 구조 확인
+        if (data && data.image_url) {
+          this.generatedImage = data.image_url;
+          this.story.aiImage = data.image_url;
+          this.storyTab = "image";
+          ElMessage.success("이미지가 생성되었습니다!");
+        } else {
+          console.error("Unexpected API response structure:", data);
+          throw new Error("이미지 URL을 받아오지 못했습니다.");
+        }
+      } catch (error) {
+        console.error("이미지 생성 에러:", error);
+        ElMessage.error(error.message || "이미지 생성에 실패했습니다.");
+      } finally {
+        this.isGeneratingImage = false;
+      }
+    },
+    async fetchAIStories() {
+      try {
+        this.loading = true;
+        this.error = null;
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://20.249.185.13/api/v1/vocabulary/ai-stories", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("AI 이야기를 불러오는데 실패했습니다.");
+        }
+
+        const stories = await response.json();
+        this.aiStories = stories.map((story) => ({
+          ...story,
+          activeTab: "english",
+          isHighlighted: false, // 각 이야기마다 하이라이트 상태 추가
+        }));
+      } catch (error) {
+        console.error("AI 이야기 로딩 에러:", error);
+        this.error = "AI 이야기를 불러오는데 실패했습니다.";
+        ElMessage.error("AI 이야기를 불러오는데 실패했습니다.");
+      } finally {
+        this.loading = false;
+      }
+    },
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    },
+    async saveStory() {
+      if (!this.story) {
+        ElMessage.warning("저장할 이야기가 없습니다.");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://20.249.185.13/api/v1/vocabulary/ai-stories", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            wordList: this.story.used_words,
+            englishStory: this.story.story,
+            koreanStory: this.story.translation,
+            aiImage: this.story.aiImage || this.generatedImage || null,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("이야기 저장에 실패했습니다.");
+        }
+
+        ElMessage.success("이야기가 저장되었습니다!");
+        await this.fetchAIStories(); // AI 이야기 목록 새로고침
+      } catch (error) {
+        console.error("이야기 저장 에러:", error);
+        ElMessage.error("이야기 저장에 실패했습니다.");
+      }
+    },
+    getHighlightedStory(story) {
+      if (!story.isHighlighted) return story.englishStory;
+
+      let text = story.englishStory;
+      const wordList = JSON.parse(story.wordList);
+      wordList.forEach((word) => {
+        const regex = new RegExp(`\\b${word}\\b`, "gi");
+        text = text.replace(regex, `<span class="highlighted-word">$&</span>`);
+      });
+      return text;
+    },
+    toggleStoryHighlight(storyId) {
+      const story = this.aiStories.find((s) => s.id === storyId);
+      if (story) {
+        story.isHighlighted = !story.isHighlighted;
+      }
+    },
+    async deleteAIStory(storyId) {
+      try {
+        await this.$confirm("이 AI 이야기를 삭제하시겠습니까?", "AI 이야기 삭제", {
+          confirmButtonText: "삭제",
+          cancelButtonText: "취소",
+          type: "warning",
+        });
+
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `http://20.249.185.13/api/v1/vocabulary/ai-stories/${storyId}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("AI 이야기 삭제에 실패했습니다.");
+        }
+
+        ElMessage.success("AI 이야기가 삭제되었습니다.");
+        await this.fetchAIStories(); // AI 이야기 목록 새로고침
+      } catch (error) {
+        if (error !== "cancel") {
+          console.error("AI 이야기 삭제 에러:", error);
+          ElMessage.error("AI 이야기 삭제에 실패했습니다.");
+        }
+      }
     },
   },
 };
@@ -813,7 +1094,7 @@ export default {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.9);
   color: #ff5252;
   border: none;
   font-size: 18px;
@@ -823,11 +1104,12 @@ export default {
   justify-content: center;
   cursor: pointer;
   z-index: 2;
-  opacity: 0;
-  transition: opacity 0.2s, background-color 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 1);
+    background-color: #ff5252;
+    color: white;
   }
 }
 
@@ -967,7 +1249,6 @@ export default {
     font-weight: 500;
     transition: all 0.2s;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    font-size: 14px;
 
     &:hover:not(:disabled) {
       background-color: #45a049;
@@ -1002,6 +1283,75 @@ export default {
       margin: 0;
       color: #333;
       font-size: 18px;
+    }
+
+    .story-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .save-button-container {
+      position: relative;
+      display: inline-block;
+    }
+
+    .tooltip {
+      visibility: hidden;
+      position: absolute;
+      bottom: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.2s;
+
+      &:after {
+        content: "";
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 0 6px 6px 6px;
+        border-style: solid;
+        border-color: transparent transparent #333 transparent;
+      }
+    }
+
+    .save-button-container:hover .tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .save-story-button {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      font-size: 14px;
+
+      &:hover:not(:disabled) {
+        background-color: #45a049;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      &:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
     }
 
     .highlight-button {
@@ -1140,6 +1490,7 @@ export default {
   perspective: 1000px;
   cursor: pointer;
   height: 500px;
+  position: relative;
 
   .card-inner {
     position: relative;
@@ -1151,6 +1502,32 @@ export default {
 
     &.is-flipped {
       transform: rotateY(180deg);
+    }
+  }
+
+  .delete-vocabulary-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #ff5252;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #ff5252;
+      color: white;
     }
   }
 
@@ -1463,5 +1840,254 @@ export default {
   background-color: #fff2b2;
   padding: 2px 4px;
   border-radius: 2px;
+}
+
+.story-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+
+  img {
+    max-width: 100%;
+    max-height: 500px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .generate-image-btn {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      background-color: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  .image-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+
+    p {
+      color: #666;
+      font-size: 16px;
+    }
+  }
+}
+
+.aistories-section {
+  margin-top: 20px;
+}
+
+.aistories-header {
+  margin-bottom: 20px;
+
+  h2 {
+    font-size: 24px;
+    color: #333;
+    margin: 0;
+  }
+}
+
+.aistories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 30px;
+  padding: 10px;
+}
+
+.aistory-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.delete-aistory-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #ff5252;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #ff5252;
+    color: white;
+  }
+}
+
+.aistory-content {
+  padding: 20px;
+}
+
+.aistory-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+
+  .aistory-tab {
+    background: none;
+    border: none;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+
+    &:hover {
+      color: #333;
+    }
+
+    &.active {
+      color: #333;
+      font-weight: 500;
+
+      &:after {
+        content: "";
+        position: absolute;
+        bottom: -11px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: #333;
+      }
+    }
+  }
+}
+
+.aistory-text {
+  margin-bottom: 20px;
+
+  p {
+    margin: 0;
+    line-height: 1.8;
+    font-size: 16px;
+    color: #333;
+  }
+}
+
+.aistory-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+
+  img {
+    max-width: 100%;
+    max-height: 500px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .no-image {
+    color: #666;
+    font-size: 16px;
+    text-align: center;
+  }
+}
+
+.aistory-meta {
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+
+  p {
+    margin: 0 0 15px 0;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .used-words {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .word-tag {
+      background-color: #fff2b2;
+      color: #333;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  }
+}
+
+.empty-aistories {
+  text-align: center;
+  padding: 60px 0;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin-top: 20px;
+
+  p {
+    color: #666;
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+}
+
+.aistory-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 15px;
+
+  .highlight-button {
+    background-color: #117df8;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    font-size: 14px;
+
+    &:hover {
+      background-color: #0c5aba;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
 }
 </style>
