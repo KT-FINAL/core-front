@@ -519,9 +519,26 @@ export default {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
+        // Parse the response to get the new book entry ID
+        const data = await response.json();
+        console.log("Book registration response:", data);
+
         // Update local state after receiving response from server
-        this.books.push({ ...book });
+        // If we have a book ID from the response, use it as myBookId
+        const newBook = {
+          ...book,
+          myBookId: data.id || data.bookId, // Use appropriate property based on API response
+        };
+
+        // Add the new book to the books array
+        this.books.push(newBook);
         ElMessage.success("책이 내 서재에 추가되었습니다.");
+
+        // If the book was just added and no myBookId is set, refresh the library
+        if (!newBook.myBookId) {
+          console.log("No myBookId set, refreshing library");
+          await this.fetchMyLibraryBooks();
+        }
       } catch (error) {
         console.error("책 추가 에러:", error);
         ElMessage.error("책을 내 서재에 추가하는데 실패했습니다.");
@@ -584,12 +601,6 @@ export default {
         }
       }
     },
-    deleteBook(bookId) {
-      if (confirm("이 책을 내 서재에서 삭제하시겠습니까?")) {
-        this.removeBookFromLibrary(bookId);
-      }
-    },
-
     async removeBookFromLibrary(bookId) {
       try {
         const token = localStorage.getItem("token");
@@ -601,11 +612,36 @@ export default {
           throw new Error(`책을 찾을 수 없습니다: ${bookId}`);
         }
 
-        // Use the myBookId from the book object, which is the ID we need for deletion
-        const id = bookToRemove.myBookId;
+        // Debug information
+        console.log("Book to remove:", bookToRemove);
+        console.log("myBookId:", bookToRemove.myBookId);
+
+        let deleteId;
+        // Make sure we have a valid ID
+        if (!bookToRemove.myBookId) {
+          console.log("myBookId not found, trying to fetch fresh library data");
+          // If myBookId is missing, try to refresh the library first
+          await this.fetchMyLibraryBooks();
+
+          // Check if we now have the book with myBookId
+          const refreshedBook = this.books.find((book) => book.id === bookId);
+
+          if (refreshedBook && refreshedBook.myBookId) {
+            console.log("Found book after refresh with myBookId:", refreshedBook.myBookId);
+            deleteId = refreshedBook.myBookId;
+          } else {
+            // As a last resort, try to delete with the book ID itself
+            console.log("Still no myBookId after refresh, attempting with bookId");
+            deleteId = bookId;
+          }
+        } else {
+          deleteId = bookToRemove.myBookId;
+        }
+
+        console.log("Attempting to delete book with ID:", deleteId);
 
         // Use the exact API endpoint as specified in the documentation
-        const response = await fetch(`${BASE_URL}/api/books/${id}`, {
+        const response = await fetch(`${BASE_URL}/api/books/${deleteId}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -865,6 +901,11 @@ export default {
           console.error("AI 이야기 삭제 에러:", error);
           ElMessage.error("AI 이야기 삭제에 실패했습니다.");
         }
+      }
+    },
+    deleteBook(bookId) {
+      if (confirm("이 책을 내 서재에서 삭제하시겠습니까?")) {
+        this.removeBookFromLibrary(bookId);
       }
     },
   },
