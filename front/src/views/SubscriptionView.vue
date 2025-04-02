@@ -17,6 +17,12 @@
 
       <div class="feature-grid">
         <div class="feature-card">
+          <div class="feature-icon">📖</div>
+          <h3>20만권 도서 제공</h3>
+          <p>구독 시 다양한 장르의 20만권 이상의 도서 콘텐츠를 무제한으로 이용하실 수 있습니다.</p>
+        </div>
+
+        <div class="feature-card">
           <div class="feature-icon">🔍</div>
           <h3>AI 기반 단어 검색</h3>
           <p>문맥을 고려한 AI 단어 검색 기능으로 더 정확한 의미를 파악할 수 있습니다.</p>
@@ -174,7 +180,7 @@ export default {
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 30px;
   margin-bottom: 50px;
 }
