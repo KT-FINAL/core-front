@@ -511,9 +511,7 @@ export default {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            allBook: {
-              id: parseInt(book.id),
-            },
+            allbookId: parseInt(book.id),
           }),
         });
 
