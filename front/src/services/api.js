@@ -49,6 +49,17 @@ export const userService = {
   },
 };
 
+export const paymentService = {
+  saveBilling: async (billingData) => {
+    try {
+      const response = await api.post("/payments/billing", billingData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
 export const vocabularyService = {
   // 단어장 목록 조회
   getVocabularyList: async () => {

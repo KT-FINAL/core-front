@@ -1,0 +1,168 @@
+<template>
+  <div class="success-container">
+    <div class="loading-spinner" v-if="isProcessing">
+      <div class="spinner"></div>
+      <p>결제 정보를 처리 중입니다...</p>
+    </div>
+    <div class="success-message" v-else>
+      <div class="success-icon">✓</div>
+      <h1>구독 신청이 완료되었습니다!</h1>
+      <p>프리미엄 서비스를 이용해 주셔서 감사합니다.</p>
+      <button @click="goToLibrary" class="library-button">내 서재로 이동</button>
+    </div>
+  </div>
+</template>
+
+<script>
+import { paymentService } from "@/services/api";
+
+export default {
+  name: "SuccessView",
+  data() {
+    return {
+      isProcessing: true,
+      paymentSuccessful: false,
+    };
+  },
+  async mounted() {
+    await this.processPayment();
+  },
+  methods: {
+    async processPayment() {
+      try {
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const customerKey = urlParams.get("customerKey");
+        const authKey = urlParams.get("authKey");
+
+        if (!customerKey || !authKey) {
+          console.error("필수 파라미터가 없습니다.");
+          this.isProcessing = false;
+          return;
+        }
+
+        // Get user info from localStorage
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (!user || !user.id) {
+          console.error("사용자 정보를 찾을 수 없습니다.");
+          this.isProcessing = false;
+          return;
+        }
+
+        // Call the API to save billing information
+        const billingData = {
+          memberId: user.id,
+          customerKey: customerKey,
+          authKey: authKey,
+        };
+
+        const response = await paymentService.saveBilling(billingData);
+        console.log("구독 결제 성공:", response);
+
+        // Update user's premium status in localStorage
+        user.isPremium = true;
+        localStorage.setItem("user", JSON.stringify(user));
+
+        this.paymentSuccessful = true;
+        this.isProcessing = false;
+      } catch (error) {
+        console.error("구독 결제 처리 중 오류 발생:", error);
+        this.isProcessing = false;
+      }
+    },
+    goToLibrary() {
+      this.$router.push("/library");
+    },
+  },
+};
+</script>
+
+<style scoped lang="scss">
+.success-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background-color: #f8f9fa;
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+.loading-spinner {
+  text-align: center;
+
+  .spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #0064ff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+  }
+
+  p {
+    color: #666;
+    font-size: 18px;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.success-message {
+  text-align: center;
+  background-color: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+}
+
+.success-icon {
+  background-color: #4caf50;
+  color: white;
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  line-height: 80px;
+  font-size: 40px;
+  margin: 0 auto 20px;
+}
+
+h1 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.library-button {
+  background-color: #0064ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 16px 40px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #0052cc;
+  }
+}
+</style>
