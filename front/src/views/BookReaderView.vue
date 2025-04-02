@@ -53,11 +53,14 @@ export default {
         title: "",
         author: "",
         id: "",
+        publisher: "",
       },
       pdfUrl: "",
       selectedText: "",
       contextParagraph: "",
       currentPage: 1,
+      loading: false,
+      error: null,
     };
   },
   created() {
@@ -65,53 +68,53 @@ export default {
     this.fetchBookInfo();
   },
   methods: {
-    fetchBookInfo() {
-      // Define book information mapping
-      const bookData = {
-        "stolen-focus": {
-          title: "Stolen Focus: Why You Can't Pay Attention",
-          author: "Johann Hari",
-          publisher: "Bloomsbury Publishing",
-          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
-        },
-        "harry-potter-1": {
-          title: "Harry Potter and the Philosopher's Stone",
-          author: "J.K. Rowling",
-          publisher: "Bloomsbury Publishing",
-          pdfUrl: "/pdfs/Joanne Rowling - Harry Potter 1.pdf",
-        },
-        desertion: {
-          title: "Desertion",
-          author: "Abdulrazak Gurnah",
-          publisher: "Anchor Books",
-          pdfUrl: "/pdfs/Abdulrazak Gurnah - Desertion (2007).pdf",
-        },
-        "boy-comes": {
-          title: "소년이 온다",
-          author: "한강",
-          publisher: "창비",
-          pdfUrl: "/pdfs/한강 - 소년이 온다 (2016).pdf",
-        },
-      };
+    async fetchBookInfo() {
+      try {
+        this.loading = true;
+        this.error = null;
 
-      // Get book data based on ID
-      const book = bookData[this.id];
-      if (!book) {
-        console.error("Book not found:", this.id);
-        this.goBack();
-        return;
+        const token = localStorage.getItem("token");
+
+        // Fetch book data from API
+        const response = await fetch(`http://20.249.185.13/api/books/all`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const books = await response.json();
+
+        // Find the book with matching ID
+        const book = books.find((book) => book.id.toString() === this.id);
+
+        if (!book) {
+          throw new Error(`Book not found with ID: ${this.id}`);
+        }
+
+        // Set book information
+        this.bookInfo = {
+          id: book.id.toString(),
+          title: book.title,
+          author: book.author,
+          publisher: book.publish,
+        };
+
+        // Set PDF URL from bookUrl
+        this.pdfUrl = book.bookUrl;
+
+        console.log("Book info fetched:", this.bookInfo);
+        console.log("PDF URL:", this.pdfUrl);
+      } catch (error) {
+        console.error("Error fetching book info:", error);
+        this.error = error.message;
+        this.$router.push("/library");
+      } finally {
+        this.loading = false;
       }
-
-      // Set book information
-      this.bookInfo = {
-        id: this.id,
-        title: book.title,
-        author: book.author,
-        publisher: book.publisher,
-      };
-
-      // Set PDF URL
-      this.pdfUrl = book.pdfUrl;
     },
 
     handleTextSelection(data) {

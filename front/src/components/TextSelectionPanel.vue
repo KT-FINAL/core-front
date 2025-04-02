@@ -142,6 +142,7 @@ export default {
           example: this.wordAnalysis.examples?.[0] || "",
           antonym: this.wordAnalysis.antonyms || "",
           synonym: this.wordAnalysis.synonyms || "",
+          bookTitle: this.actualBookInfo.title || "Unknown Book",
         };
 
         await vocabularyService.saveWord(wordData);

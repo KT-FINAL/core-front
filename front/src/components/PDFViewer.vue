@@ -99,7 +99,11 @@ export default {
         const baseUrl = window.location.origin;
         let fullUrl = this.pdfUrl;
 
-        if (!this.pdfUrl.startsWith("http")) {
+        // If the URL comes from the API
+        if (this.pdfUrl.startsWith("http")) {
+          console.log("Loading PDF from remote URL:", this.pdfUrl);
+          fullUrl = this.pdfUrl;
+        } else if (this.pdfUrl.startsWith("/")) {
           // Local PDF file path handling
           const pathParts = this.pdfUrl.split("/");
           console.log("Path parts:", pathParts);
@@ -117,14 +121,6 @@ export default {
 
           fullUrl = `${baseUrl}${normalizedPath}`;
           console.log("Encoded local PDF path:", this.pdfUrl, "->", fullUrl);
-
-          // Also try to fetch directly to check if file exists
-          try {
-            const testFetch = await fetch(`${baseUrl}/pdfs/${encodedFilename}`, { method: "HEAD" });
-            console.log(`Direct fetch test: ${testFetch.status} ${testFetch.statusText}`);
-          } catch (e) {
-            console.warn("Direct fetch test failed:", e);
-          }
         }
 
         console.log("Loading PDF from:", fullUrl);
@@ -133,25 +129,24 @@ export default {
         let resourceExists = false;
 
         try {
-          const response = await fetch(fullUrl, { method: "HEAD" });
+          const token = localStorage.getItem("token");
+
+          // Use token for API requests
+          const headers = {};
+          if (fullUrl.includes("20.249.185.13")) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+
+          const response = await fetch(fullUrl, {
+            method: "HEAD",
+            headers,
+          });
+
+          // Store response status for logging purposes
           resourceExists = response.ok;
 
           if (!response.ok) {
             console.error(`Received ${response.status} ${response.statusText} for ${fullUrl}`);
-
-            // Try with double encoding which sometimes helps with special characters
-            if (!this.pdfUrl.startsWith("http")) {
-              const doubleEncodedPath = encodeURI(fullUrl);
-              console.log("Trying with double encoding:", doubleEncodedPath);
-
-              const altResponse = await fetch(doubleEncodedPath, { method: "HEAD" });
-              resourceExists = altResponse.ok;
-
-              if (altResponse.ok) {
-                fullUrl = doubleEncodedPath;
-                console.log("Double encoding worked, using:", fullUrl);
-              }
-            }
           } else {
             console.log("Resource exists at:", fullUrl);
           }
@@ -159,76 +154,45 @@ export default {
           console.warn("Failed to check resource existence:", fetchError);
         }
 
-        if (!resourceExists && !this.pdfUrl.startsWith("http")) {
-          // Try a direct path if resource doesn't exist at the normal location
-          const directPath = `/pdfs/${encodeURIComponent(this.pdfUrl.split("/").pop())}`;
-          const directUrl = `${baseUrl}${directPath}`;
-
-          console.log("Trying direct path:", directUrl);
-
-          try {
-            const directResponse = await fetch(directUrl, { method: "HEAD" });
-            if (directResponse.ok) {
-              fullUrl = directUrl;
-              resourceExists = true;
-              console.log("Direct path exists, using:", fullUrl);
-            }
-          } catch (directError) {
-            console.warn("Direct path check failed:", directError);
-          }
-        }
-
         try {
           // First try with the provided URL
           console.log("Attempting to load PDF with URL:", fullUrl);
-          this.pdfDoc = await this.tryLoadPDF(fullUrl);
+
+          // Add authorization header if loading from API
+          const loadOptions = {
+            url: fullUrl,
+            withCredentials: false,
+            cMapUrl: "https://unpkg.com/pdfjs-dist@2.6.347/cmaps/",
+            cMapPacked: true,
+            disableRange: false,
+            disableStream: false,
+            disableAutoFetch: false,
+          };
+
+          // Add authorization header if it's an API URL
+          if (fullUrl.includes("20.249.185.13")) {
+            const token = localStorage.getItem("token");
+            loadOptions.httpHeaders = {
+              Authorization: `Bearer ${token}`,
+            };
+          }
+
+          this.pdfDoc = await pdfjsLib.getDocument(loadOptions).promise;
           console.log("Successfully loaded PDF from URL:", fullUrl);
         } catch (firstError) {
           console.warn("Failed to load PDF with initial URL:", firstError.message);
 
-          if (!this.pdfUrl.startsWith("http")) {
-            // Try different encoding approaches for local files
-            const encodingAttempts = [
-              encodeURI(fullUrl),
-              `${baseUrl}/pdfs/${encodeURIComponent(this.pdfUrl.split("/").pop())}`,
-              `${baseUrl}${this.pdfUrl.replace(/ /g, "%20")}`,
-              // Add more direct attempts for local PDF
-              `${baseUrl}/pdfs/Johann%20Hari%20-%20Stolen%20focus%20(2022).pdf`,
-            ];
-
-            console.log("Trying fallback encoding approaches:", encodingAttempts);
-
-            let loaded = false;
-
-            for (const attemptUrl of encodingAttempts) {
-              if (loaded) break;
-
-              try {
-                console.log("Trying alternate encoding:", attemptUrl);
-                this.pdfDoc = await this.tryLoadPDF(attemptUrl);
-                console.log("Successfully loaded PDF with alternate encoding:", attemptUrl);
-                loaded = true;
-              } catch (encodeError) {
-                console.warn("Encoding attempt failed:", encodeError.message);
-              }
-            }
-
-            if (!loaded) {
-              // Fall back to sample PDF as last resort
-              console.log("All local PDF loading attempts failed, falling back to sample");
-              const samplePdfUrl =
-                "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf";
-              this.pdfDoc = await this.tryLoadPDF(samplePdfUrl);
-              console.log("Successfully loaded fallback PDF");
-            }
-          } else {
-            // Try Mozilla sample for non-local URLs
-            const samplePdfUrl =
-              "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf";
-            console.log("Trying fallback sample PDF from:", samplePdfUrl);
-            this.pdfDoc = await this.tryLoadPDF(samplePdfUrl);
-            console.log("Successfully loaded fallback PDF");
+          // If we found the resource exists but loading failed, log an explanation
+          if (resourceExists) {
+            console.warn("Resource exists but PDF loading failed, possibly due to format issues");
           }
+
+          // If direct loading failed, try with a fallback URL as last resort
+          console.log("Loading fallback PDF");
+          const samplePdfUrl =
+            "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf";
+          this.pdfDoc = await this.tryLoadPDF(samplePdfUrl);
+          console.log("Successfully loaded fallback PDF");
         }
 
         console.log("PDF loaded successfully, pages:", this.pdfDoc.numPages);
@@ -250,8 +214,11 @@ export default {
     },
 
     async tryLoadPDF(url) {
-      // Fetch the PDF with additional options
-      const loadingTask = pdfjsLib.getDocument({
+      // Get the authorization token if needed
+      const token = localStorage.getItem("token");
+
+      // Prepare loading options
+      const options = {
         url: url,
         withCredentials: false,
         cMapUrl: "https://unpkg.com/pdfjs-dist@2.6.347/cmaps/",
@@ -259,7 +226,17 @@ export default {
         disableRange: false,
         disableStream: false,
         disableAutoFetch: false,
-      });
+      };
+
+      // Add authorization header if it's an API URL
+      if (url.includes("20.249.185.13")) {
+        options.httpHeaders = {
+          Authorization: `Bearer ${token}`,
+        };
+      }
+
+      // Fetch the PDF with additional options
+      const loadingTask = pdfjsLib.getDocument(options);
 
       // Add progress logging
       loadingTask.onProgress = (progressData) => {

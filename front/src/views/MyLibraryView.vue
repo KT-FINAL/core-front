@@ -430,7 +430,9 @@ export default {
       }
     },
     openBook(bookId) {
-      this.$router.push(`/book/${bookId}`);
+      console.log("Opening book with ID:", bookId);
+      // Ensure bookId is converted to string if needed
+      this.$router.push(`/book/${bookId.toString()}`);
     },
     checkForExtractedCovers() {
       this.books.forEach((book) => {
