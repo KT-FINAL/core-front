@@ -6,6 +6,8 @@ import BookReaderView from "../views/BookReaderView.vue";
 import VocabularyView from "../views/VocabularyView.vue";
 import SubscriptionView from "../views/SubscriptionView.vue";
 import PaymentView from "@/views/PaymentView.vue";
+import SuccessView from "@/views/SuccessView.vue";
+import FailView from "@/views/FailView.vue";
 
 const routes = [
   {
@@ -65,6 +67,24 @@ const routes = [
     path: "/payment",
     name: "payment",
     component: PaymentView,
+  },
+  {
+    path: "/success",
+    name: "success",
+    component: SuccessView,
+    meta: {
+      requiresAuth: true,
+      title: "결제 완료 | 밀리의 서재",
+    },
+  },
+  {
+    path: "/fail",
+    name: "fail",
+    component: FailView,
+    meta: {
+      requiresAuth: true,
+      title: "결제 실패 | 밀리의 서재",
+    },
   },
 ];
 
