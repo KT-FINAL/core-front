@@ -7,8 +7,7 @@
       </div>
       <div class="user-menu">
         <span class="username">{{ userName }}님</span>
-        <span v-if="isPremium" class="premium-badge">Premium 구독 중입니다</span>
-        <button v-else @click="goToSubscription" class="subscribe-button">구독하기</button>
+        <span class="premium-badge">Premium 구독중</span>
         <button @click="handleLogout" class="logout-button">로그아웃</button>
       </div>
     </div>
@@ -216,7 +215,7 @@
 </template>
 
 <script>
-import { vocabularyService, userService } from "@/services/api";
+import { vocabularyService, userService, BASE_URL } from "@/services/api";
 import { ElMessage } from "element-plus";
 
 export default {
@@ -283,9 +282,6 @@ export default {
       localStorage.removeItem("token"); // 토큰도 삭제
       this.$router.push("/");
     },
-    goToSubscription() {
-      this.$router.push("/subscription");
-    },
     async fetchUserInfo() {
       try {
         const userInfo = await userService.getUserInfo();
@@ -301,7 +297,7 @@ export default {
         this.isLoadingBooks = true;
         const token = localStorage.getItem("token");
 
-        const response = await fetch("http://20.249.185.13/api/books/all", {
+        const response = await fetch(`${BASE_URL}/api/books/all`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -337,7 +333,8 @@ export default {
       try {
         const token = localStorage.getItem("token");
 
-        const response = await fetch("http://20.249.185.13/api/books/user", {
+        // Use the exact API endpoint as specified in the documentation
+        const response = await fetch(`${BASE_URL}/api/books/user`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -391,7 +388,8 @@ export default {
       try {
         const token = localStorage.getItem("token");
 
-        const response = await fetch("http://20.249.185.13/api/books/register", {
+        // Use the exact API endpoint and payload structure specified in the documentation
+        const response = await fetch(`${BASE_URL}/api/books/register`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -482,6 +480,7 @@ export default {
     async removeBookFromLibrary(bookId) {
       try {
         const token = localStorage.getItem("token");
+
         // Find the book object
         const bookToRemove = this.books.find((book) => book.id === bookId);
 
@@ -489,8 +488,8 @@ export default {
           throw new Error(`책을 찾을 수 없습니다: ${bookId}`);
         }
 
-        // Use the book's ID for API call
-        const response = await fetch(`http://20.249.185.13/api/books/${bookId}`, {
+        // Use the exact API endpoint as specified in the documentation
+        const response = await fetch(`${BASE_URL}/api/books/${bookId}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -644,28 +643,13 @@ export default {
 }
 
 .premium-badge {
-  background-color: #45a049;
+  background-color: #117df8;
   color: white;
   border-radius: 4px;
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 500;
-}
-
-.subscribe-button {
-  background-color: #117df8;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-size: 14px;
-  cursor: pointer;
   transition: all 0.2s;
-  margin-right: -10px;
-
-  &:hover {
-    background-color: #0c5aba;
-  }
 }
 
 .logout-button {
@@ -1284,7 +1268,6 @@ export default {
 .search-content {
   margin-top: 20px;
 }
-
 .search-bar {
   display: flex;
   margin-bottom: 20px;

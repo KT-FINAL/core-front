@@ -7,6 +7,7 @@
       </div>
       <div class="user-menu">
         <span class="username">{{ userName }}님</span>
+        <button @click="handleLogout" class="logout-button">로그아웃</button>
       </div>
     </div>
 
@@ -54,34 +55,42 @@
 </template>
 
 <script>
-import { userService } from "@/services/api";
+import { userService, subscriptionService } from "@/services/api";
 
 export default {
   name: "SubscriptionView",
   data() {
     return {
-      userName: "User", // 기본값 설정
+      userName: "User",
     };
   },
   async mounted() {
-    await this.fetchUserInfo();
-    await this.checkSubscriptionStatus();
+    try {
+      // Validate user login status first
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+      // If user is not logged in, redirect to login
+      if (!storedUser.isLoggedIn || !storedUser.id) {
+        console.warn("User is not logged in or missing ID. Redirecting to login.");
+        localStorage.removeItem("user"); // Clean up invalid data
+        this.$router.push("/");
+        return;
+      }
+
+      // If checks pass, proceed with normal flow
+      await this.fetchUserInfo();
+      await this.checkSubscriptionStatus();
+    } catch (error) {
+      console.error("Error during component initialization:", error);
+    }
   },
   methods: {
     async fetchUserInfo() {
       try {
         const userInfo = await userService.getUserInfo();
         this.userName = userInfo.name;
-
-        // Also check the premium status from API and update localStorage if needed
-        const storedUser = JSON.parse(localStorage.getItem("user"));
-        if (storedUser && userInfo.isPremium !== undefined) {
-          storedUser.isPremium = userInfo.isPremium;
-          localStorage.setItem("user", JSON.stringify(storedUser));
-        }
       } catch (error) {
         console.error("사용자 정보 로딩 에러:", error);
-        // 오류 발생 시 localStorage에서 시도
         const localUserInfo = JSON.parse(localStorage.getItem("user"));
         if (localUserInfo && localUserInfo.name) {
           this.userName = localUserInfo.name;
@@ -90,17 +99,91 @@ export default {
     },
     async checkSubscriptionStatus() {
       try {
-        const userInfo = await userService.getUserInfo();
-        if (userInfo.isPremium) {
-          // 구독 중인 사용자는 라이브러리로 리디렉션
+        // Get stored user data first
+        const storedUser = JSON.parse(localStorage.getItem("user")) || {};
+
+        // If user is not logged in, or no user data is found, redirect to login
+        if (!storedUser.isLoggedIn || !storedUser.id) {
+          console.warn(
+            "User not properly logged in or missing user ID. Redirecting to login page."
+          );
+          // Clear any invalid user data
+          localStorage.removeItem("user");
+          this.$router.push("/");
+          return;
+        }
+
+        // If user is already marked as premium in localStorage, redirect to library
+        if (storedUser.isPremium) {
+          console.log("User is already marked as premium in localStorage, redirecting to library");
           this.$router.push("/library");
+          return;
+        }
+
+        // Try to get user info from API, which will also check subscription
+        let userInfo;
+        try {
+          userInfo = await userService.getUserInfo();
+        } catch (apiError) {
+          console.error("Failed to get user info from API:", apiError);
+          // If API call fails but we have local user data, continue with that
+          if (!storedUser.id) {
+            console.warn("No valid user ID available. Redirecting to login page.");
+            localStorage.removeItem("user");
+            this.$router.push("/");
+            return;
+          }
+        }
+
+        if (userInfo && userInfo.isPremium) {
+          console.log("User info API confirms premium status, redirecting to library");
+          // Update localStorage before redirecting
+          if (storedUser.id) {
+            storedUser.isPremium = true;
+            localStorage.setItem("user", JSON.stringify(storedUser));
+          }
+          this.$router.push("/library");
+        } else {
+          console.log("User is not premium according to API");
+
+          // Try direct subscription check as a fallback
+          try {
+            if (storedUser.id) {
+              console.log("Checking subscription status for member ID:", storedUser.id);
+              // Direct subscription check (with retry and error handling built in)
+              const subscription = await subscriptionService.getActiveSubscription(storedUser.id);
+
+              if (subscription && subscription.id) {
+                console.log(
+                  "Direct subscription check found active subscription, redirecting to library"
+                );
+                storedUser.isPremium = true;
+                localStorage.setItem("user", JSON.stringify(storedUser));
+                this.$router.push("/library");
+              }
+            } else {
+              console.warn("Cannot check subscription - no user ID available");
+              // This should not happen due to the early check, but just in case
+              this.$router.push("/");
+            }
+          } catch (subError) {
+            console.error("Direct subscription check failed:", subError);
+            // Stay on subscription page
+          }
         }
       } catch (error) {
         console.error("구독 상태 확인 에러:", error);
+        // If all attempts fail, redirect to login page
+        this.$router.push("/");
       }
     },
     goToPayment() {
       this.$router.push("/payment");
+    },
+    handleLogout() {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token"); // 토큰도 삭제
+      this.$router.push("/");
     },
   },
 };
@@ -156,6 +239,21 @@ export default {
   font-size: 16px;
   font-weight: 500;
   color: #333;
+}
+
+.logout-button {
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #e8e8e8;
+  }
 }
 
 .content {

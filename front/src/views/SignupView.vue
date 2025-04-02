@@ -130,34 +130,67 @@ export default {
 
       try {
         // Call the registration API
-        await userService.register({
+        const registerResponse = await userService.register({
           email: this.email,
           name: this.name,
           phone: this.phone,
           password: this.password,
         });
 
-        // Login the user automatically after registration
-        const loginResponse = await userService.login({
-          email: this.email,
-          password: this.password,
-        });
+        console.log("Registration successful:", registerResponse);
 
-        // Store user data in localStorage
-        const userData = {
-          id: loginResponse.id,
-          email: this.email,
-          name: this.name,
-          isLoggedIn: true,
-          isPremium: false, // New users are not premium by default
-        };
+        try {
+          // Login the user automatically after registration
+          const loginResponse = await userService.login({
+            email: this.email,
+            password: this.password,
+          });
 
-        // Save to localStorage
-        localStorage.setItem("user", JSON.stringify(userData));
+          console.log("Auto-login after registration successful:", loginResponse);
 
-        // Redirect to subscription page after successful signup
-        this.$router.push("/subscription");
+          // Validate member ID from login response
+          if (!loginResponse.id) {
+            console.error("Login response missing member ID:", loginResponse);
+            this.error = "로그인 응답에 사용자 ID가 없습니다. 관리자에게 문의해주세요.";
+            this.$router.push("/");
+            this.isLoading = false;
+            return;
+          }
+
+          // Ensure ID is a number
+          if (typeof loginResponse.id !== "number") {
+            console.error("User ID is not a number:", loginResponse.id);
+            this.error = "사용자 ID가 올바른 형식이 아닙니다. 관리자에게 문의해주세요.";
+            this.$router.push("/");
+            this.isLoading = false;
+            return;
+          }
+
+          // Store user data in localStorage with numeric ID
+          const userData = {
+            id: loginResponse.id, // Already validated as number
+            email: this.email,
+            name: this.name,
+            isLoggedIn: true,
+            isPremium: false, // New users are not premium by default
+          };
+
+          // Save to localStorage
+          localStorage.setItem("user", JSON.stringify(userData));
+          console.log("User data stored in localStorage:", userData);
+
+          // Redirect to subscription page after successful signup
+          this.$router.push("/subscription");
+        } catch (loginError) {
+          console.error("Auto-login failed:", loginError);
+          // Fall back to manual login
+          this.error =
+            "계정이 생성되었지만 자동 로그인에 실패했습니다. 로그인 페이지로 이동합니다.";
+          this.$router.push("/");
+          this.isLoading = false;
+        }
       } catch (error) {
+        console.error("Signup error:", error);
         this.error = error.message || "회원가입 중 오류가 발생했습니다.";
       } finally {
         this.isLoading = false;
