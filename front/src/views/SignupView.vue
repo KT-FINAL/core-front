@@ -137,8 +137,22 @@ export default {
           password: this.password,
         });
 
-        // Redirect to login page after successful signup
-        this.$router.push("/");
+        // Login the user automatically after registration
+        const loginResponse = await userService.login({
+          email: this.email,
+          password: this.password,
+        });
+
+        // Store user data in Vuex store
+        this.$store.commit("setUser", {
+          email: this.email,
+          name: this.name,
+          isLoggedIn: true,
+          ...loginResponse,
+        });
+
+        // Redirect to subscription page after successful signup
+        this.$router.push("/subscription");
       } catch (error) {
         this.error = error.message || "회원가입 중 오류가 발생했습니다.";
       } finally {
