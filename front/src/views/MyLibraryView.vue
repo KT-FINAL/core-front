@@ -314,7 +314,7 @@ export default {
 
         const books = await response.json();
 
-        // 데이터 형식 변환
+        // Convert data format
         this.allBooks = books.map((book) => ({
           id: book.id.toString(),
           title: book.title,
@@ -324,7 +324,7 @@ export default {
           publisher: book.publish,
         }));
 
-        // 사용자의 서재 책 불러오기
+        // Load user's library books
         await this.fetchMyLibraryBooks();
       } catch (error) {
         console.error("책 목록 로딩 에러:", error);
@@ -350,19 +350,35 @@ export default {
 
         const myBooks = await response.json();
 
-        // 데이터 형식 변환
-        this.books = myBooks.map((book) => ({
-          id: book.id.toString(),
-          title: book.title,
-          author: book.author,
-          coverImage: book.coverUrl,
-          pdfUrl: book.bookUrl,
-          publisher: book.publish,
-        }));
+        // Get list of book IDs from the user's library returned by API
+        if (Array.isArray(myBooks) && myBooks.length > 0) {
+          // Find and display book information based on IDs in the user's library
+          this.books = myBooks
+            .map((myBook) => {
+              // Check if allBook property exists
+              const bookId = myBook.allBook?.id || myBook.id;
+              // Find the book with matching ID from the complete book list
+              const foundBook = this.allBooks.find(
+                (book) => book.id.toString() === bookId.toString()
+              );
+
+              if (foundBook) {
+                return {
+                  ...foundBook,
+                  myBookId: myBook.id, // Save the ID of the library item (for deletion etc.)
+                };
+              }
+              return null;
+            })
+            .filter((book) => book !== null); // Filter out null values
+        } else {
+          // Empty array or unexpected format
+          this.books = [];
+        }
       } catch (error) {
         console.error("내 서재 불러오기 에러:", error);
         ElMessage.error("내 서재를 불러오는데 실패했습니다.");
-        // 오류 발생 시 빈 배열로 설정
+        // Set to empty array in case of error
         this.books = [];
       }
     },
@@ -383,7 +399,9 @@ export default {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            bookId: parseInt(book.id),
+            allBook: {
+              id: parseInt(book.id),
+            },
           }),
         });
 
@@ -391,7 +409,7 @@ export default {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
-        // 서버에서 응답 받은 후 로컬 상태 업데이트
+        // Update local state after receiving response from server
         this.books.push({ ...book });
         ElMessage.success("책이 내 서재에 추가되었습니다.");
       } catch (error) {
@@ -463,7 +481,14 @@ export default {
     async removeBookFromLibrary(bookId) {
       try {
         const token = localStorage.getItem("token");
+        // Find the book object
+        const bookToRemove = this.books.find((book) => book.id === bookId);
 
+        if (!bookToRemove) {
+          throw new Error(`책을 찾을 수 없습니다: ${bookId}`);
+        }
+
+        // Use the book's ID for API call
         const response = await fetch(`http://20.249.185.13/api/book/${bookId}`, {
           method: "DELETE",
           headers: {
@@ -475,9 +500,9 @@ export default {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
-        // 서버 응답 성공 후 로컬 상태 업데이트
+        // Update local state after successful server response
         this.books = this.books.filter((book) => book.id !== bookId);
-        // 추출된 커버 이미지 삭제
+        // Delete extracted cover image
         localStorage.removeItem(`book_cover_${bookId}`);
         ElMessage.success("책이 내 서재에서 삭제되었습니다.");
       } catch (error) {
@@ -500,7 +525,7 @@ export default {
       try {
         const query = this.searchQuery.toLowerCase();
 
-        // 로컬에서 검색 수행 (title, author 포함 여부 확인)
+        // Perform local search (check if title or author contains query)
         this.searchResults = this.allBooks.filter(
           (book) =>
             book.title.toLowerCase().includes(query) || book.author.toLowerCase().includes(query)
@@ -533,13 +558,13 @@ export default {
       this.storyError = null;
 
       try {
-        // 무작위로 5개의 단어 선택
+        // Select 5 random words
         const randomWords = this.vocabulary
           .sort(() => 0.5 - Math.random())
           .slice(0, 5)
           .map((word) => word.word);
 
-        // AI 이야기 생성
+        // Generate AI story
         const response = await vocabularyService.createStory(randomWords);
         this.story = response;
       } catch (error) {
