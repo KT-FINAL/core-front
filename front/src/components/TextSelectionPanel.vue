@@ -70,7 +70,7 @@
 </template>
 
 <script>
-import { vocabularyService } from "@/services/api";
+import { vocabularyService, wordAnalysisService } from "@/services/api";
 import { ElMessage } from "element-plus";
 
 export default {
@@ -165,31 +165,12 @@ export default {
       this.wordAnalysis = null;
 
       try {
-        // Use publisher from book info if available
-        const publisher = this.actualBookInfo.publisher || "문학수첩";
-
-        // Use the real API with mode: 'cors' and additional headers to handle CORS
-        const response = await fetch("http://4.230.153.71/analyze-word", {
-          method: "POST",
-          mode: "cors", // Explicitly set CORS mode
-          credentials: "omit", // Don't send cookies
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            book_title: this.actualBookInfo.title || "해리포터와 마법사의 돌",
-            publisher: publisher,
-            paragraph: this.actualContext || "",
-            word: this.actualText.trim(),
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`API 요청 실패: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await wordAnalysisService.analyzeWord(
+          this.actualText,
+          this.actualBookInfo.title,
+          this.actualBookInfo.publisher,
+          this.actualContext
+        );
         console.log("API 응답:", data);
         this.wordAnalysis = data;
       } catch (error) {

@@ -62,34 +62,45 @@
       <div v-if="activeTab === 'vocabulary'" class="vocabulary-section">
         <div class="vocabulary-header">
           <h2>내 단어장</h2>
-          <button
-            @click="generateStory"
-            class="generate-story-button"
-            :disabled="isGeneratingStory || vocabulary.length < 5"
-          >
-            <span v-if="isGeneratingStory">이야기 생성 중...</span>
-            <span v-else>AI 이야기 만들기</span>
-          </button>
+          <div class="vocabulary-actions">
+            <button @click="flipAllCards(true)" class="flip-button">단어 뜻 보기</button>
+            <button @click="flipAllCards(false)" class="flip-button">단어만 보기</button>
+            <button
+              @click="generateStory"
+              class="generate-story-button"
+              :disabled="isGeneratingStory || vocabulary.length < 5"
+            >
+              <span v-if="isGeneratingStory">이야기 생성 중...</span>
+              <span v-else>AI 이야기 만들기</span>
+            </button>
+          </div>
         </div>
 
         <div v-if="story" class="story-section">
-          <h3>AI가 만든 이야기</h3>
+          <div class="story-header">
+            <h3>AI가 만든 이야기</h3>
+            <button @click="toggleHighlight" class="highlight-button">
+              {{ isHighlighted ? "하이라이트 끄기" : "사용된 단어 보기" }}
+            </button>
+          </div>
           <div class="story-content">
-            <div class="story-english">
-              <h4>영어</h4>
-              <p>{{ story.story }}</p>
+            <div class="story-tabs">
+              <button
+                :class="['story-tab', { active: storyTab === 'english' }]"
+                @click="storyTab = 'english'"
+              >
+                영어
+              </button>
+              <button
+                :class="['story-tab', { active: storyTab === 'korean' }]"
+                @click="storyTab = 'korean'"
+              >
+                한국어
+              </button>
             </div>
-            <div class="story-korean">
-              <h4>한국어</h4>
-              <p>{{ story.translation }}</p>
-            </div>
-            <div class="used-words">
-              <h4>사용된 단어</h4>
-              <div class="word-tags">
-                <span v-for="word in story.used_words" :key="word" class="word-tag">
-                  {{ word }}
-                </span>
-              </div>
+            <div class="story-text">
+              <p v-if="storyTab === 'english'" v-html="highlightedStory"></p>
+              <p v-else>{{ story.translation }}</p>
             </div>
           </div>
         </div>
@@ -104,16 +115,32 @@
         </div>
 
         <div v-else class="vocabulary-list">
-          <div v-for="word in vocabulary" :key="word.id" class="vocabulary-item">
-            <div class="word-header">
-              <h3 class="vocabulary-word">{{ word.word }}</h3>
-              <el-button type="danger" size="small" @click="handleDelete(word.id)">삭제</el-button>
-            </div>
-            <div class="word-content">
-              <p><strong>의미:</strong> {{ word.mean }}</p>
-              <p><strong>예문:</strong> {{ word.example }}</p>
-              <p><strong>동의어:</strong> {{ word.synonym }}</p>
-              <p><strong>반의어:</strong> {{ word.antonym }}</p>
+          <div
+            v-for="word in vocabulary"
+            :key="word.id"
+            class="vocabulary-item"
+            @click="toggleWordCard(word.id)"
+          >
+            <div class="card-inner" :class="{ 'is-flipped': flippedCards[word.id] }">
+              <div class="card-front">
+                <div class="word-header">
+                  <h3 class="vocabulary-word">{{ word.word }}</h3>
+                  <el-button type="danger" size="small" @click.stop="handleDelete(word.id)"
+                    >삭제</el-button
+                  >
+                </div>
+              </div>
+              <div class="card-back">
+                <div class="word-header">
+                  <h3 class="vocabulary-word">{{ word.word }}</h3>
+                </div>
+                <div class="word-content">
+                  <p><strong>의미:</strong> {{ word.mean }}</p>
+                  <p class="example-sentence"><strong>예문:</strong> {{ word.example }}</p>
+                  <p><strong>동의어:</strong> {{ word.synonym || "없음" }}</p>
+                  <p><strong>반의어:</strong> {{ word.antonym || "없음" }}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -193,6 +220,8 @@ export default {
   data() {
     return {
       activeTab: "library",
+      storyTab: "english",
+      flippedCards: {},
       books: [
         {
           id: "stolen-focus",
@@ -303,11 +332,22 @@ export default {
       isGeneratingStory: false,
       story: null,
       storyError: null,
+      isHighlighted: false,
     };
   },
   computed: {
     displayedBooks() {
       return this.hasSearched ? this.searchResults : this.allBooks;
+    },
+    highlightedStory() {
+      if (!this.story || !this.isHighlighted) return this.story?.story || "";
+
+      let text = this.story.story;
+      this.story.used_words.forEach((word) => {
+        const regex = new RegExp(`\\b${word}\\b`, "gi");
+        text = text.replace(regex, `<span class="highlighted-word">$&</span>`);
+      });
+      return text;
     },
   },
   watch: {
@@ -476,6 +516,19 @@ export default {
       } finally {
         this.isGeneratingStory = false;
       }
+    },
+    toggleWordCard(wordId) {
+      this.flippedCards[wordId] = !this.flippedCards[wordId];
+    },
+    flipAllCards(showMeaning) {
+      const newFlippedCards = {};
+      this.vocabulary.forEach((word) => {
+        newFlippedCards[word.id] = showMeaning;
+      });
+      this.flippedCards = newFlippedCards;
+    },
+    toggleHighlight() {
+      this.isHighlighted = !this.isHighlighted;
     },
   },
 };
@@ -802,24 +855,55 @@ export default {
   align-items: center;
   margin-bottom: 20px;
 
-  .generate-story-button {
+  .vocabulary-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .flip-button {
     background-color: #fff2b2;
     color: #333;
     border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
+    padding: 10px 20px;
+    border-radius: 6px;
     cursor: pointer;
     font-weight: 500;
     transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+
+    &:hover {
+      background-color: #ffe980;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  .generate-story-button {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
 
     &:hover:not(:disabled) {
-      background-color: #ffeb99;
+      background-color: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     &:disabled {
       background-color: #f5f5f5;
       color: #999;
       cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
   }
 }
@@ -829,39 +913,90 @@ export default {
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
-  h3 {
-    margin: 0 0 16px;
-    color: #333;
-    font-size: 18px;
+  .story-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+
+    h3 {
+      margin: 0;
+      color: #333;
+      font-size: 18px;
+    }
+
+    .highlight-button {
+      background-color: #117df8;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      font-size: 14px;
+
+      &:hover {
+        background-color: #0c5aba;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
   }
 
   .story-content {
-    .story-english,
-    .story-korean {
+    .story-tabs {
+      display: flex;
+      gap: 10px;
       margin-bottom: 16px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
 
-      h4 {
-        margin: 0 0 8px;
-        color: #666;
+      .story-tab {
+        background: none;
+        border: none;
+        padding: 8px 16px;
         font-size: 14px;
+        color: #666;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s;
+
+        &:hover {
+          color: #333;
+        }
+
+        &.active {
+          color: #333;
+          font-weight: 500;
+
+          &:after {
+            content: "";
+            position: absolute;
+            bottom: -11px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #333;
+          }
+        }
       }
+    }
+
+    .story-text {
+      margin-bottom: 16px;
 
       p {
         margin: 0;
-        line-height: 1.6;
+        line-height: 1.8;
         font-size: 16px;
+        color: #333;
       }
     }
 
     .used-words {
-      h4 {
-        margin: 0 0 8px;
-        color: #666;
-        font-size: 14px;
-      }
-
       .word-tags {
         display: flex;
         flex-wrap: wrap;
@@ -900,29 +1035,91 @@ export default {
 }
 
 .vocabulary-item {
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
-  background-color: white;
+  perspective: 1000px;
+  cursor: pointer;
+  height: 500px;
 
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+  .card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+
+    &.is-flipped {
+      transform: rotateY(180deg);
+    }
   }
-}
 
-.word-header {
-  padding: 15px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #eee;
-}
+  .card-front,
+  .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    background-color: white;
+  }
 
-.vocabulary-word {
-  margin: 0 0 5px 0;
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
+  .card-back {
+    transform: rotateY(180deg);
+  }
+
+  .word-header {
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #eee;
+    position: relative;
+    z-index: 1;
+  }
+
+  .vocabulary-word {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .word-content {
+    height: calc(100% - 100px);
+    padding: 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+
+    p {
+      margin: 0;
+      padding: 15px 20px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #333;
+      border-radius: 8px;
+      background-color: #f8f9fa;
+      border: 1px solid #eee;
+
+      &.example-sentence {
+        margin-bottom: 10px;
+      }
+
+      strong {
+        display: block;
+        color: #666;
+        font-weight: 500;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+    }
+  }
 }
 
 .language-tag {
@@ -1158,5 +1355,11 @@ export default {
 
 .view-all-button {
   display: none;
+}
+
+:deep(.highlighted-word) {
+  background-color: #fff2b2;
+  padding: 2px 4px;
+  border-radius: 2px;
 }
 </style>
