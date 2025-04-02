@@ -53,6 +53,7 @@
             <div class="book-info">
               <h3 class="book-title">{{ book.title }}</h3>
               <p class="book-author">{{ book.author }}</p>
+              <p class="book-publisher">{{ book.publisher }}</p>
               <div class="book-actions">
                 <button @click="openBook(book.id)" class="read-book-btn">바로 읽기</button>
               </div>
@@ -160,8 +161,9 @@
           <button @click="performSearch" class="search-button">검색</button>
         </div>
 
-        <div v-if="isSearching" class="loading">
-          <el-loading :fullscreen="false" />
+        <div v-if="isSearching || isLoadingBooks" class="loading">
+          <div class="spinner"></div>
+          <p>책을 불러오는 중...</p>
         </div>
         <div v-else-if="searchError" class="error">
           {{ searchError }}
@@ -169,16 +171,16 @@
         <div v-else-if="hasSearched && searchResults.length === 0" class="empty-search-results">
           <p>검색 결과가 없습니다. 다른 검색어를 시도해보세요.</p>
         </div>
-        <div class="search-results-header" v-if="hasSearched">
+        <div class="search-results-header" v-if="hasSearched && !isLoadingBooks">
           <h2>
             검색 결과 <span class="divider">|</span>
             <span class="reset-link" @click="viewAllBooks">검색 초기화</span>
           </h2>
         </div>
-        <div class="search-results-title" v-else>
+        <div class="search-results-title" v-else-if="!isLoadingBooks">
           <h2>모든 도서</h2>
         </div>
-        <div class="books-grid">
+        <div v-if="!isLoadingBooks && !isSearching" class="books-grid">
           <div v-for="book in displayedBooks" :key="book.id" class="book-card">
             <div class="book-cover">
               <img v-if="book.coverImage" :src="book.coverImage" :alt="book.title" />
@@ -190,6 +192,7 @@
             <div class="book-info">
               <h3 class="book-title">{{ book.title }}</h3>
               <p class="book-author">{{ book.author }}</p>
+              <p v-if="book.publisher" class="book-publisher">{{ book.publisher }}</p>
               <div class="book-actions">
                 <button
                   v-if="isBookInLibrary(book.id)"
@@ -224,36 +227,8 @@ export default {
       activeTab: "library",
       storyTab: "english",
       flippedCards: {},
-      books: [
-        {
-          id: "stolen-focus",
-          title: "Stolen Focus: Why You Can't Pay Attention",
-          author: "Johann Hari",
-          coverImage: "/covers/Cover_Johann Hari - Stolen focus (2022).png",
-          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
-        },
-        {
-          id: "harry-potter-1",
-          title: "Harry Potter and the Philosopher's Stone",
-          author: "J.K. Rowling",
-          coverImage: "/covers/Cover_Joanne Rowling - Harry Potter 1.png",
-          pdfUrl: "/pdfs/Joanne Rowling - Harry Potter 1.pdf",
-        },
-        {
-          id: "desertion",
-          title: "Desertion",
-          author: "Abdulrazak Gurnah",
-          coverImage: "/covers/Cover_Abdulrazak Gurnah - Desertion (2007).png",
-          pdfUrl: "/pdfs/Abdulrazak Gurnah - Desertion (2007).pdf",
-        },
-        {
-          id: "boy-comes",
-          title: "소년이 온다",
-          author: "한강",
-          coverImage: "/covers/Cover_한강 - 소년이 온다 (2016).png",
-          pdfUrl: "/pdfs/한강 - 소년이 온다 (2016).pdf",
-        },
-      ],
+      isPremium: false,
+      books: [],
       vocabulary: [],
       loading: false,
       error: null,
@@ -265,72 +240,8 @@ export default {
       searchError: null,
       hasSearched: false,
       showAllBooks: true,
-      allBooks: [
-        {
-          id: "stolen-focus",
-          title: "Stolen Focus: Why You Can't Pay Attention",
-          author: "Johann Hari",
-          coverImage: "/covers/Cover_Johann Hari - Stolen focus (2022).png",
-          pdfUrl: "/pdfs/Johann Hari - Stolen focus (2022).pdf",
-          publisher: "Bloomsbury Publishing",
-        },
-        {
-          id: "harry-potter-1",
-          title: "Harry Potter and the Philosopher's Stone",
-          author: "J.K. Rowling",
-          coverImage: "/covers/Cover_Joanne Rowling - Harry Potter 1.png",
-          pdfUrl: "/pdfs/Joanne Rowling - Harry Potter 1.pdf",
-          publisher: "Bloomsbury Publishing",
-        },
-        {
-          id: "desertion",
-          title: "Desertion",
-          author: "Abdulrazak Gurnah",
-          coverImage: "/covers/Cover_Abdulrazak Gurnah - Desertion (2007).png",
-          pdfUrl: "/pdfs/Abdulrazak Gurnah - Desertion (2007).pdf",
-          publisher: "Bloomsbury Publishing",
-        },
-        {
-          id: "boy-comes",
-          title: "소년이 온다",
-          author: "한강",
-          coverImage: "/covers/Cover_한강 - 소년이 온다 (2016).png",
-          pdfUrl: "/pdfs/한강 - 소년이 온다 (2016).pdf",
-          publisher: "창비",
-        },
-        {
-          id: "pride-and-prejudice",
-          title: "Pride and Prejudice",
-          author: "Jane Austen",
-          coverImage: "/covers/Cover_Jane Austen - Pride and Prejudice.png",
-          pdfUrl: "/pdfs/Jane Austen - Pride and Prejudice.pdf",
-          publisher: "Penguin Classics",
-        },
-        {
-          id: "1984",
-          title: "1984",
-          author: "George Orwell",
-          coverImage: "/covers/Cover_George Orwell - 1984.png",
-          pdfUrl: "/pdfs/George Orwell - 1984.pdf",
-          publisher: "Penguin Books",
-        },
-        {
-          id: "to-kill-a-mockingbird",
-          title: "To Kill a Mockingbird",
-          author: "Harper Lee",
-          coverImage: "/covers/Cover_Harper Lee - To Kill a Mockingbird.png",
-          pdfUrl: "/pdfs/Harper Lee - To Kill a Mockingbird.pdf",
-          publisher: "J. B. Lippincott & Co.",
-        },
-        {
-          id: "the-great-gatsby",
-          title: "The Great Gatsby",
-          author: "F. Scott Fitzgerald",
-          coverImage: "/covers/Cover_F. Scott Fitzgerald - The Great Gatsby.png",
-          pdfUrl: "/pdfs/F. Scott Fitzgerald - The Great Gatsby.pdf",
-          publisher: "Charles Scribner's Sons",
-        },
-      ],
+      allBooks: [],
+      isLoadingBooks: false,
       isGeneratingStory: false,
       story: null,
       storyError: null,
@@ -363,8 +274,9 @@ export default {
     },
   },
   async mounted() {
-    this.checkForExtractedCovers();
     await this.fetchUserInfo();
+    await this.fetchAllBooks();
+    this.checkForExtractedCovers();
   },
   methods: {
     handleLogout() {
@@ -383,6 +295,121 @@ export default {
       } catch (error) {
         console.error("사용자 정보 로딩 에러:", error);
         ElMessage.error("사용자 정보를 불러오는데 실패했습니다.");
+      }
+    },
+    async fetchAllBooks() {
+      try {
+        this.isLoadingBooks = true;
+        const token = localStorage.getItem("token");
+
+        const response = await fetch("http://20.249.185.13/api/books/all", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const books = await response.json();
+
+        // 데이터 형식 변환
+        this.allBooks = books.map((book) => ({
+          id: book.id.toString(),
+          title: book.title,
+          author: book.author,
+          coverImage: book.coverUrl,
+          pdfUrl: book.bookUrl,
+          publisher: book.publish,
+        }));
+
+        // 사용자의 서재 책 불러오기
+        await this.fetchMyLibraryBooks();
+      } catch (error) {
+        console.error("책 목록 로딩 에러:", error);
+        ElMessage.error("책 목록을 불러오는데 실패했습니다.");
+      } finally {
+        this.isLoadingBooks = false;
+      }
+    },
+
+    async fetchMyLibraryBooks() {
+      try {
+        const token = localStorage.getItem("token");
+
+        const response = await fetch("http://20.249.185.13/api/book", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const myBooks = await response.json();
+
+        // 데이터 형식 변환
+        this.books = myBooks.map((book) => ({
+          id: book.id.toString(),
+          title: book.title,
+          author: book.author,
+          coverImage: book.coverUrl,
+          pdfUrl: book.bookUrl,
+          publisher: book.publish,
+        }));
+      } catch (error) {
+        console.error("내 서재 불러오기 에러:", error);
+        ElMessage.error("내 서재를 불러오는데 실패했습니다.");
+        // 오류 발생 시 빈 배열로 설정
+        this.books = [];
+      }
+    },
+
+    async addToLibrary(book) {
+      if (this.isBookInLibrary(book.id)) {
+        ElMessage.info("이미 내 서재에 있는 책입니다.");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("token");
+
+        const response = await fetch("http://20.249.185.13/api/book", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            bookId: parseInt(book.id),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        // 서버에서 응답 받은 후 로컬 상태 업데이트
+        this.books.push({ ...book });
+        ElMessage.success("책이 내 서재에 추가되었습니다.");
+      } catch (error) {
+        console.error("책 추가 에러:", error);
+        ElMessage.error("책을 내 서재에 추가하는데 실패했습니다.");
+      }
+    },
+
+    async addAndRead(book) {
+      if (!this.isBookInLibrary(book.id)) {
+        try {
+          await this.addToLibrary(book);
+          this.openBook(book.id);
+        } catch (error) {
+          console.error("책 추가 및 읽기 에러:", error);
+        }
+      } else {
+        this.openBook(book.id);
       }
     },
     openBook(bookId) {
@@ -429,11 +456,33 @@ export default {
     },
     deleteBook(bookId) {
       if (confirm("이 책을 내 서재에서 삭제하시겠습니까?")) {
-        // Filter out the book with the matching ID
+        this.removeBookFromLibrary(bookId);
+      }
+    },
+
+    async removeBookFromLibrary(bookId) {
+      try {
+        const token = localStorage.getItem("token");
+
+        const response = await fetch(`http://20.249.185.13/api/book/${bookId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        // 서버 응답 성공 후 로컬 상태 업데이트
         this.books = this.books.filter((book) => book.id !== bookId);
-        // Remove the extracted cover from localStorage
+        // 추출된 커버 이미지 삭제
         localStorage.removeItem(`book_cover_${bookId}`);
         ElMessage.success("책이 내 서재에서 삭제되었습니다.");
+      } catch (error) {
+        console.error("책 삭제 에러:", error);
+        ElMessage.error("책을 내 서재에서 삭제하는데 실패했습니다.");
       }
     },
     // Search functionality
@@ -451,16 +500,13 @@ export default {
       try {
         const query = this.searchQuery.toLowerCase();
 
-        // In a real app, this would be an API call
-        // Always search in both title and author (the "all" option)
-        setTimeout(() => {
-          this.searchResults = this.allBooks.filter(
-            (book) =>
-              book.title.toLowerCase().includes(query) || book.author.toLowerCase().includes(query)
-          );
+        // 로컬에서 검색 수행 (title, author 포함 여부 확인)
+        this.searchResults = this.allBooks.filter(
+          (book) =>
+            book.title.toLowerCase().includes(query) || book.author.toLowerCase().includes(query)
+        );
 
-          this.isSearching = false;
-        }, 500);
+        this.isSearching = false;
       } catch (error) {
         console.error("검색 중 오류 발생:", error);
         this.searchError = "검색 중 오류가 발생했습니다.";
@@ -469,22 +515,6 @@ export default {
     },
     isBookInLibrary(bookId) {
       return this.books.some((book) => book.id === bookId);
-    },
-    addToLibrary(book) {
-      if (this.isBookInLibrary(book.id)) {
-        ElMessage.info("이미 내 서재에 있는 책입니다.");
-        return;
-      }
-
-      this.books.push({ ...book });
-      ElMessage.success("책이 내 서재에 추가되었습니다.");
-    },
-    addAndRead(book) {
-      if (!this.isBookInLibrary(book.id)) {
-        this.books.push({ ...book });
-        ElMessage.success("책이 내 서재에 추가되었습니다.");
-      }
-      this.openBook(book.id);
     },
     viewAllBooks() {
       this.searchQuery = "";
@@ -812,6 +842,15 @@ export default {
   text-overflow: ellipsis;
 }
 
+.book-publisher {
+  margin: 0 0 15px 0;
+  font-size: 13px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .read-book-btn {
   width: 100%;
   height: 40px;
@@ -1019,9 +1058,34 @@ export default {
 
 .loading {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 200px;
+
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-left-color: #117df8;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+
+  p {
+    color: #666;
+    font-size: 16px;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error {
