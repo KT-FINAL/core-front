@@ -42,25 +42,59 @@ export default {
   data() {
     return {
       userName: "User",
+      userId: null,
+      userEmail: "",
       tossPayments: null,
       payment: null,
     };
   },
   async mounted() {
-    await this.fetchUserInfo();
-    this.initializeTossPayments();
-    this.checkPremiumStatus();
+    try {
+      // Check if user is properly logged in first
+      const storedUser = JSON.parse(localStorage.getItem("user")) || {};
+      if (!storedUser.isLoggedIn || !storedUser.id) {
+        console.error("User not properly authenticated or missing ID. Redirecting to login.");
+        localStorage.removeItem("user"); // Clear invalid user data
+        this.$router.push("/");
+        return;
+      }
+
+      // Proceed with normal flow
+      await this.fetchUserInfo();
+      await this.checkPremiumStatus();
+      // Initialize Toss Payments only after user data is loaded
+      this.initializeTossPayments();
+    } catch (error) {
+      console.error("Error during component initialization:", error);
+      this.$router.push("/");
+    }
   },
   methods: {
     async fetchUserInfo() {
       try {
         const userInfo = await userService.getUserInfo();
         this.userName = userInfo.name;
+        this.userId = userInfo.id;
+        this.userEmail = userInfo.email;
+
+        // Ensure user data is properly stored in localStorage
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        if (!storedUser.id && userInfo.id) {
+          // If locally stored user is missing ID but API has it, update local storage
+          storedUser.id = userInfo.id;
+          storedUser.name = userInfo.name;
+          storedUser.email = userInfo.email;
+          storedUser.isLoggedIn = true;
+          localStorage.setItem("user", JSON.stringify(storedUser));
+          console.log("Updated user data in localStorage with ID:", userInfo.id);
+        }
       } catch (error) {
         console.error("사용자 정보 로딩 에러:", error);
         const localUserInfo = JSON.parse(localStorage.getItem("user"));
         if (localUserInfo && localUserInfo.name) {
           this.userName = localUserInfo.name;
+          this.userId = localUserInfo.id;
+          this.userEmail = localUserInfo.email;
         }
       }
     },
@@ -77,19 +111,61 @@ export default {
       }
     },
     initializeTossPayments() {
+      // Get user info from localStorage
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (!user || !user.id) {
+        console.error("Cannot initialize payments: User ID not found");
+        // Try to get user data again from the component instance
+        const localUserData = {
+          id: this.userId,
+          name: this.userName,
+          email: this.userEmail,
+          isLoggedIn: true,
+        };
+
+        if (localUserData.id) {
+          console.log("Using component data for payments initialization");
+          // Use data from component if available
+          this.initializePaymentWithUser(localUserData);
+        } else {
+          // If still no user ID, show error and redirect to login
+          alert("사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.");
+          this.$router.push("/");
+        }
+        return;
+      }
+
+      this.initializePaymentWithUser(user);
+    },
+
+    initializePaymentWithUser(user) {
       // TOSS SDK 초기화
       const clientKey = "test_ck_DnyRpQWGrN50KxqNg6QeVKwv1M9E";
-      const customerKey = "vpmZrcR_urVsV_6caqYKz"; // This should be unique per user
+
+      // Generate a unique customerKey based on user ID and timestamp for uniqueness
+      const customerKey = `user_${user.id}_${new Date().getTime()}`;
+
+      console.log("Initializing Toss Payments with customerKey:", customerKey);
       this.tossPayments = window.TossPayments(clientKey);
       this.payment = this.tossPayments.payment({ customerKey });
+
+      // Store customerKey in session for retrieval in success page
+      sessionStorage.setItem("tossCustomerKey", customerKey);
     },
     async requestBillingAuth() {
       try {
+        // Get user info from localStorage
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (!user) {
+          console.error("User data not found for payment");
+          return;
+        }
+
         await this.payment.requestBillingAuth({
           method: "CARD",
           successUrl: window.location.origin + "/success",
           failUrl: window.location.origin + "/fail",
-          customerEmail: "customer123@gmail.com", // This should be the actual user's email
+          customerEmail: user.email || "", // Use actual user's email
           customerName: this.userName,
         });
       } catch (error) {

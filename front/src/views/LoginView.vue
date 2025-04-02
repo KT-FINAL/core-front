@@ -53,7 +53,7 @@
 </template>
 
 <script>
-import { userService } from "@/services/api";
+import { userService, subscriptionService } from "@/services/api";
 
 export default {
   name: "LoginView",
@@ -79,28 +79,122 @@ export default {
           password: this.password,
         });
 
+        console.log("Login response:", response);
+
+        // Validate member ID from login response
+        if (!response.id) {
+          console.error("Login response missing member ID:", response);
+          this.error = "로그인 응답에 사용자 ID가 없습니다. 다시 시도해주세요.";
+          this.isLoading = false;
+          return;
+        }
+
+        // Convert ID to number if it's a string
+        const userId = typeof response.id === "string" ? parseInt(response.id, 10) : response.id;
+        if (isNaN(userId)) {
+          console.error("Invalid user ID format:", response.id);
+          this.error = "유효하지 않은 사용자 ID 형식입니다. 다시 시도해주세요.";
+          this.isLoading = false;
+          return;
+        }
+
         // Store user data in localStorage
         const userData = {
-          id: response.id,
+          id: userId, // Store as number
           email: this.email,
-          name: response.name,
+          name: response.name || "User", // Default name if missing
           isLoggedIn: true,
-          isPremium: response.isPremium || false, // Ensure isPremium is saved
+          isPremium: response.isPremium || false, // Initialize isPremium from login response
         };
 
-        // Save to localStorage
+        // Save initial data to localStorage
         localStorage.setItem("user", JSON.stringify(userData));
 
-        // Redirect to library or subscription page based on premium status
+        // Verify subscription status
+        try {
+          console.log("Verifying subscription status for member ID:", userData.id);
+          let hasSubscription = false;
+
+          // Check for active subscription first
+          try {
+            console.log("Checking active subscription for user:", userData.id);
+            const activeSubscription = await subscriptionService.getActiveSubscription(userData.id);
+
+            if (activeSubscription && activeSubscription.id) {
+              hasSubscription = true;
+              console.log("User has active subscription");
+            } else {
+              console.log("No active subscription found:", activeSubscription);
+            }
+          } catch (subError) {
+            console.error("Error checking active subscription:", subError);
+            // Continue to next check
+          }
+
+          // If no active subscription found, check all subscriptions
+          if (!hasSubscription && userData.id) {
+            try {
+              console.log("No single active subscription found, checking all subscriptions...");
+              const allSubscriptions = await subscriptionService.getAllSubscriptions(userData.id);
+              console.log("All subscriptions response:", JSON.stringify(allSubscriptions));
+
+              // Check if there are any subscriptions at all
+              if (Array.isArray(allSubscriptions) && allSubscriptions.length > 0) {
+                hasSubscription = true;
+                console.log("Found subscriptions in history");
+              }
+            } catch (subError) {
+              console.error("Error checking all subscriptions:", subError);
+            }
+          }
+
+          // Update premium status based on subscription checks
+          userData.isPremium = hasSubscription;
+          console.log("Final premium status after all checks:", userData.isPremium);
+        } catch (subError) {
+          console.error("Error in subscription verification process:", subError);
+          // If can't verify subscription, use the isPremium from login response as fallback
+          userData.isPremium = response.isPremium || false;
+          console.log("Using fallback premium status:", userData.isPremium);
+        }
+
+        // Save to localStorage with updated subscription status
+        localStorage.setItem("user", JSON.stringify(userData));
+
+        // Get complete user info including subscription status from API
+        try {
+          console.log("Fetching complete user info after login");
+          const completeUserInfo = await userService.getUserInfo();
+
+          // If the API returned subscription status, use it to update stored user data
+          if (completeUserInfo && completeUserInfo.isPremium !== undefined) {
+            console.log("User info API returned isPremium:", completeUserInfo.isPremium);
+            userData.isPremium = completeUserInfo.isPremium;
+            localStorage.setItem("user", JSON.stringify(userData));
+          }
+        } catch (infoError) {
+          console.error("Error fetching complete user info:", infoError);
+          // Continue with the login flow even if this fails
+        }
+
+        // Redirect based on subscription status
         if (userData.isPremium) {
+          console.log("Redirecting to library (premium user)");
           this.$router.push("/library");
         } else {
+          console.log("Redirecting to subscription page (non-premium user)");
           this.$router.push("/subscription");
         }
       } catch (error) {
+        console.error("Login error:", error);
+
         // Check if the error is specifically about invalid credentials
         if (error.response?.status === 401) {
           this.error = "이메일 또는 비밀번호가 일치하지 않습니다.";
+        } else if (error.serverError) {
+          this.error = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        } else if (error.message) {
+          this.error = error.message;
         } else {
           this.error = "로그인 중 오류가 발생했습니다.";
         }
