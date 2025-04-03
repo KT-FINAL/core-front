@@ -86,6 +86,9 @@
             >
               <span v-if="isGeneratingStory">이야기 생성 중...</span>
               <span v-else>AI 이야기 만들기</span>
+              <div v-if="vocabulary.length < 5" class="tooltip">
+                단어가 5개 이상일때 가능합니다.
+              </div>
             </button>
           </div>
         </div>
@@ -1289,6 +1292,7 @@ export default {
     font-weight: 500;
     transition: all 0.2s;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
 
     &:hover:not(:disabled) {
       background-color: #45a049;
@@ -1302,6 +1306,39 @@ export default {
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
+    }
+
+    .tooltip {
+      visibility: hidden;
+      position: absolute;
+      bottom: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.2s;
+
+      &:after {
+        content: "";
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 0 6px 6px 6px;
+        border-style: solid;
+        border-color: transparent transparent #333 transparent;
+      }
+    }
+
+    &:disabled:hover .tooltip {
+      visibility: visible;
+      opacity: 1;
     }
   }
 }
