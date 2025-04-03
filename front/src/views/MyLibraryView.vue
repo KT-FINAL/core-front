@@ -158,6 +158,11 @@
           <p>{{ error }}</p>
         </div>
 
+        <div v-else-if="vocabulary.length === 0" class="empty-vocabulary">
+          <p>아직 저장된 단어가 없습니다.</p>
+          <button class="browse-books-btn" @click="activeTab = 'search'">책 둘러보기</button>
+        </div>
+
         <div v-else class="vocabulary-list">
           <div
             v-for="word in vocabulary"
@@ -166,8 +171,8 @@
             @click="toggleWordCard(word.id)"
           >
             <div class="card-inner" :class="{ 'is-flipped': flippedCards[word.id] }">
-              <button @click.stop="handleDelete(word.id)" class="delete-vocabulary-btn">
-                &times;
+              <button @click.stop="handleComplete(word.id)" class="complete-learning-btn">
+                학습 완료하기
               </button>
               <div class="card-front">
                 <div class="word-header">
@@ -584,20 +589,32 @@ export default {
         this.loading = false;
       }
     },
-    async handleDelete(wordId) {
+    async handleComplete(wordId) {
       try {
-        await this.$confirm("이 단어를 삭제하시겠습니까?", "단어 삭제", {
-          confirmButtonText: "삭제",
+        await this.$confirm("이 단어를 학습 완료하시겠습니까?", "단어 학습 완료", {
+          confirmButtonText: "학습 완료",
           cancelButtonText: "취소",
           type: "warning",
         });
-        await vocabularyService.deleteWord(wordId);
-        ElMessage.success("단어가 삭제되었습니다.");
+
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${BASE_URL}/api/v1/vocabulary/${wordId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("단어 학습 완료에 실패했습니다.");
+        }
+
+        ElMessage.success("단어가 학습 완료되었습니다.");
         await this.fetchVocabulary(); // 목록 새로고침
       } catch (error) {
         if (error !== "cancel") {
-          console.error("단어 삭제 에러:", error);
-          ElMessage.error("단어 삭제에 실패했습니다.");
+          console.error("단어 학습 완료 에러:", error);
+          ElMessage.error("단어 학습 완료에 실패했습니다.");
         }
       }
     },
@@ -1525,32 +1542,44 @@ export default {
 
     &.is-flipped {
       transform: rotateY(180deg);
+
+      .complete-learning-btn {
+        visibility: hidden;
+        opacity: 0;
+        transition: visibility 0s 0.2s, opacity 0.2s;
+      }
+    }
+
+    &:not(.is-flipped) .complete-learning-btn {
+      visibility: visible;
+      opacity: 1;
+      transition: visibility 0s 0.2s, opacity 0.2s;
     }
   }
 
-  .delete-vocabulary-btn {
+  .complete-learning-btn {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.9);
-    color: #ff5252;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #4caf50;
+    color: white;
     border: none;
-    font-size: 18px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
     cursor: pointer;
-    z-index: 2;
+    font-weight: 500;
+    transition: all 0.2s, visibility 0s 0.2s, opacity 0.2s;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.2s;
+    z-index: 2;
+    visibility: visible;
+    opacity: 1;
 
     &:hover {
-      background-color: #ff5252;
-      color: white;
+      background-color: #45a049;
+      transform: translate(-50%, -50%) translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
   }
 
